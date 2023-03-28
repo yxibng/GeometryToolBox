@@ -10,25 +10,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/*
- 长度5-20cm
- 初次打开默认 10cm
- */
-
-@class NXRulerView;
-@protocol NXRulerViewDelegate <NSObject>
-
-- (void)rulerView:(NXRulerView *)rulerView gestureBeganWithPoint:(CGPoint)point;
-- (void)rulerView:(NXRulerView *)rulerView gestureMovedToPoint:(CGPoint)point;
-- (void)rulerView:(NXRulerView *)rulerView gestureEndedWithPoint:(CGPoint)point;
-
-
-@end
-
 
 @interface NXRulerView : UIView<NXGeometryToolProtocol>
-
-
 /*
  每种工具可以打开多个
  该种类型的工具间， 通过tag来区分

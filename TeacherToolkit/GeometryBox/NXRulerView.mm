@@ -378,15 +378,12 @@
 #pragma mark -
 
 - (void)_onClickCloseButton:(UIButton *)button {
-    NSLog(@"%s", __PRETTY_FUNCTION__);
     if (self.delegate && [self.delegate respondsToSelector:@selector(geometryToolOnCloseButtonClicked:)]) {
         [self.delegate geometryToolOnCloseButtonClicked:self];
     }
 }
 
 - (void)_onEnlargePanGestureChanged:(UIPanGestureRecognizer *)panGesture {
-    NSLog(@"%s", __PRETTY_FUNCTION__);
-    NSAssert(_whiteboardWidth > 0, @"_onEnlargePanGestureChanged, whiteboardWidth can not be zero!");
     CGPoint translation = [panGesture translationInView:self.superview];
     CGFloat ratio = translation.x * 2 / _whiteboardWidth;
     [panGesture setTranslation:CGPointZero inView:self.superview];
@@ -395,14 +392,16 @@
         _normBaseSideLength = newWidth;
         [self _recalculate];
         [self _redraw];
+        //notify base side length change
+        if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onNormBaseSideLengthChanged:)]) {
+            [self.delegate geometryTool:self onNormBaseSideLengthChanged:_normBaseSideLength];
+        }
     }
 }
 
 
 - (void)_onRotationPanGestureChanged:(UIPanGestureRecognizer *)rotationGesture {
-    
     //参考： https://ost.51cto.com/posts/89
-    
     static CGPoint pre;
     switch (rotationGesture.state) {
         case UIGestureRecognizerStateBegan:
@@ -419,6 +418,11 @@
             _rotationAngle += angle;
             self.layer.affineTransform = CGAffineTransformMakeRotation(_rotationAngle);
             pre = cur;
+            
+            //notify rotation angle changed
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onRotationAngleChanged:)]) {
+                [self.delegate geometryTool:self onRotationAngleChanged:_rotationAngle];
+            }
         }
             break;
         default:
@@ -436,41 +440,36 @@
     [moveGesture setTranslation:CGPointZero inView:self.superview];
     
     _normPosition = CGPointMake(anchorPoint.x / _whiteboardWidth, anchorPoint.y / _whiteboardWidth);
+    //notify norm position changed
+    if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onNormPositionChanged:)]) {
+        [self.delegate geometryTool:self onNormPositionChanged:_normPosition];
+    }
 }
 
 
 - (void)_onDrawLinePanGestureChanged:(UIPanGestureRecognizer *)panGesture {
-#if 0
-    CGPoint translation = [panGesture translationInView:self];
     CGPoint location = [panGesture locationInView:self];
-    //drop y to zero
-    location.y = 0;
-    location.y -= self.drawLineWidth / 2;
-    CGPoint locationInSuperView = [self convertPoint:location toView:self.superview];
-    NSLog(@"translation %@", NSStringFromCGPoint(translation));
-    NSLog(@"location %@", NSStringFromCGPoint(location));
+    location.y = -self.drawLineWidth / 2;
+    CGPoint locationInSuperview = [self convertPoint:location toView:self.superview];
     switch (panGesture.state) {
         case UIGestureRecognizerStateBegan:
-            NSLog(@"began");
-            [self.rulerViewDelegate rulerView:self gestureBeganWithPoint:locationInSuperView];
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineBeganAtPoint:)]) {
+                [self.delegate geometryTool:self onDrawLineBeganAtPoint:locationInSuperview];
+            }
             break;
         case UIGestureRecognizerStateChanged:
-            NSLog(@"changed");
-            [self.rulerViewDelegate rulerView:self gestureMovedToPoint:locationInSuperView];
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineMovedToPoint:)]) {
+                [self.delegate geometryTool:self onDrawLineMovedToPoint:locationInSuperview];
+            }
             break;
         case UIGestureRecognizerStateEnded:
-            NSLog(@"ended");
-            [self.rulerViewDelegate rulerView:self gestureEndedWithPoint:locationInSuperView];
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineEndedAtPoint:)]) {
+                [self.delegate geometryTool:self onDrawLineEndedAtPoint:locationInSuperview];
+            }
             break;
-            
-        case UIGestureRecognizerStateCancelled:
-            NSLog(@"cancelled");
-            break;
-
         default:
             break;
     }
-#endif
 }
 
 @end

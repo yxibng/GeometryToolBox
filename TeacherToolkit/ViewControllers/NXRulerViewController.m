@@ -58,6 +58,7 @@
 
 - (void)geometryToolOnCloseButtonClicked:(nonnull UIView<NXGeometryToolProtocol> *)geometryTool {
     //TODO: send message and remove
+    [geometryTool removeFromSuperview];
 }
 
 //宽度扩大，缩小事件
