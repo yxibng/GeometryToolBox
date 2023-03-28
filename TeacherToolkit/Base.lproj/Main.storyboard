@@ -192,7 +192,7 @@
         <scene sceneID="7wa-k8-oL1">
             <objects>
                 <viewController id="76P-g3-TgH" customClass="NXCompassViewController" sceneMemberID="viewController">
-                    <view key="view" contentMode="scaleToFill" id="6sF-q5-44I">
+                    <view key="view" contentMode="scaleToFill" id="6sF-q5-44I" customClass="NXWhiteboardView">
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>

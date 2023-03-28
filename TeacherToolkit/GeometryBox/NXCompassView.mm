@@ -87,6 +87,7 @@ static NSString *penImageName = @"pen";
 @interface NXPenImageView : UIImageView
 
 @property (nonatomic, strong) UIButton *enalrgeButton;
+@property (nonatomic, assign, readonly) CGPoint penNibPoint;
 
 @end
 
@@ -121,6 +122,49 @@ static NSString *penImageName = @"pen";
     self.enalrgeButton.layer.position = CGPointMake(width * normCenterX, width * normCenterY);
 }
 
+
+- (BOOL)pointInPen:(CGPoint)point {
+    
+    const CGFloat normWidth = 35/ 95.0;
+    const CGFloat normHeight = 294 /95.0;
+    const CGFloat boundWidth = self.bounds.size.width;
+    const CGFloat width = normWidth * boundWidth;
+    const CGFloat height = normHeight * boundWidth;
+    
+    //顺时针旋转了11度
+    const CGFloat rotationDegree = 11.0;
+    {
+        /*
+         CGAffineTransformMakeRotation
+         angle >0, 逆时针
+         angle <0, 顺时针
+         */
+        
+        
+        CGFloat x = boundWidth * 61 / 95.0;
+        CGFloat y = boundWidth * 78 / 95.0;
+        
+        const CGAffineTransform translation = CGAffineTransformMakeTranslation(-x, -y);
+        const CGAffineTransform rotation = CGAffineTransformMakeRotation(-DEGREES_TO_RADIANS(rotationDegree));
+        
+        CGPoint p = CGPointApplyAffineTransform(point, translation);
+        p = CGPointApplyAffineTransform(p, rotation);
+        
+        CGRect rect = CGRectMake(0, 0, width, height);
+        if (CGRectContainsPoint(rect, p)) {
+            NSLog(@"in pen");
+            return YES;
+        }
+    }
+    //TODO:  test pen nib
+    return NO;
+}
+
+
+- (CGPoint)penNibPoint {
+    return CGPointMake(0, self.bounds.size.height);
+}
+
 @end
 
 
@@ -128,7 +172,7 @@ static NSString *penImageName = @"pen";
 #pragma mark -
 
 
-@interface NXCompassView ()
+@interface NXCompassView ()<UIGestureRecognizerDelegate>
 
 @property (nonatomic, strong) UIImageView *footImageView;
 @property (nonatomic, strong) NXHandleImageView *handleImageView;
@@ -142,7 +186,6 @@ static NSString *penImageName = @"pen";
 
 
 @implementation NXCompassView
-
 
 - (instancetype)initWithFrame:(CGRect)frame {
     if (self = [super initWithFrame:frame]) {
@@ -161,18 +204,19 @@ static NSString *penImageName = @"pen";
 
 - (void)_setup {
     
+    self.clipsToBounds = NO;
+    self.backgroundColor = UIColor.clearColor;
+    //锚点设置为右下角
+    self.layer.anchorPoint = CGPointMake(1.0, 1.0);
+    
+    _rotationAngle = 0;
+    _openAngleInDegree = 0;
+    
     //move gesture
     {
-        
         _moveGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onMovePanGestureChanged:)];
         [self addGestureRecognizer:_moveGesture];
     }
-        
-    self.clipsToBounds = NO;
-    self.backgroundColor = UIColor.clearColor;
-    
-    //锚点设置为右下角
-    self.layer.anchorPoint = CGPointMake(1.0, 1.0);
     
     //foot
     {
@@ -194,6 +238,7 @@ static NSString *penImageName = @"pen";
         {
             //TODO: 画弧线手势响应区域需要处理， 应该只是笔的部分响应，其他部分应该响应的是移动手势
             UIPanGestureRecognizer *drawArcGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onDrawArcPanGestureChanged:)];
+            drawArcGesture.delegate = self;
             [_penImageView addGestureRecognizer:drawArcGesture];
             _drawArcGesture = drawArcGesture;
         }
@@ -218,9 +263,27 @@ static NSString *penImageName = @"pen";
         [self addSubview:_handleImageView];
     }
     
-    _rotationAngle = 0;
-    _openAngleInDegree = 0;
 }
+
+#pragma mark - 
+//同步打开角度变更
+- (void)syncOpenAngleInDegree:(CGFloat)openAngleInDegree {
+    self.openAngleInDegree = openAngleInDegree;
+}
+//同步锁定状态
+- (void)syncCurrentOpenAngleLocked:(BOOL)currentOpenAngleLocked {
+    self.currentOpenAngleLocked = currentOpenAngleLocked;
+}
+//同步旋转角度
+- (void)syncRotationAngle:(CGFloat)rotationAngle {
+    self.rotationAngle = rotationAngle;
+}
+//同步锚点位置
+- (void)syncNormPosition:(CGPoint)normPosition {
+    self.normPosition = normPosition;
+}
+
+
 
 #pragma mark -
 
@@ -230,10 +293,8 @@ static NSString *penImageName = @"pen";
         return;
     }
     _whiteboardWidth = whiteboardWidth;
-    
     {
         CGRect bounds = self.bounds;
-        //TOOD: 计算bounds
         auto normSizeOfFoot =  NXGeometryBox::CompassLayout::normSizeOfFoot();
         bounds.size.width = normSizeOfFoot.width * whiteboardWidth;
         bounds.size.height = normSizeOfFoot.height * whiteboardWidth;
@@ -248,17 +309,11 @@ static NSString *penImageName = @"pen";
         return;
     }
     _normPosition = normPosition;
-    //TODO: 计算自己的位置
-    
-    
     const CGFloat whiteboardWidth = self.whiteboardWidth;
-    
     CGFloat x = whiteboardWidth * normPosition.x;
     CGFloat y = whiteboardWidth * normPosition.y;
-    
     self.layer.position = CGPointMake(x, y);
 }
-
 
 - (void)setRotationAngle:(CGFloat)rotationAngle {
     if (_rotationAngle == rotationAngle) {
@@ -304,11 +359,10 @@ static NSString *penImageName = @"pen";
     {
         auto normSize = NXGeometryBox::CompassLayout::normSizeOfPen();
         _penImageView.bounds = CGRectMake(0, 0, normSize.width * whiteboardWidth, normSize.height * whiteboardWidth);
-
+        
         _penImageView.layer.position = joinPoint;
         _penImageView.layer.affineTransform = CGAffineTransformRotate(CGAffineTransformIdentity, NXGeometryBox::degreeToRadians(-self.openAngleInDegree));
     }
-    
     //handle
     {
         auto normSize = NXGeometryBox::CompassLayout::normSizeOfHandle();
@@ -323,10 +377,8 @@ static NSString *penImageName = @"pen";
     
     BOOL ret = [super pointInside:point withEvent:event];
     if (ret) return YES;
-
     
     //test pen
-   
     {
         CGPoint p = [self convertPoint:point toView:self.penImageView];
         if (CGRectContainsPoint(self.penImageView.bounds, p)) {
@@ -341,13 +393,28 @@ static NSString *penImageName = @"pen";
             return YES;
         }
     }
+    return NO;
+}
+
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
+    
+    if (gestureRecognizer == self.drawArcGesture) {
+        if ([touch.view isDescendantOfView:self.penImageView.enalrgeButton]) {
+            return NO;
+        }
+        CGPoint point = [touch locationInView:self.penImageView];
+        if ([self.penImageView pointInPen:point]) {
+            return YES;
+        }
+    }
     
     return NO;
 }
 
 
-#pragma mark -
 
+#pragma mark -
 
 - (void)_onMovePanGestureChanged:(UIPanGestureRecognizer *)moveGesture {
     CGPoint translation = [moveGesture translationInView:self.superview];
@@ -357,13 +424,14 @@ static NSString *penImageName = @"pen";
     anchorPoint.y += translation.y;
     self.layer.position = anchorPoint;
     [moveGesture setTranslation:CGPointZero inView:self.superview];
-    
     _normPosition = CGPointMake(anchorPoint.x / _whiteboardWidth, anchorPoint.y / _whiteboardWidth);
+    //notify norm position changed
+    if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onNormPositionChanged:)]) {
+        [self.delegate geometryTool:self onNormPositionChanged:_normPosition];
+    }
 }
 
 - (void)_onEnlargePanGestureChanged:(UIPanGestureRecognizer *)panGesture {
-    NSLog(@"%s", __PRETTY_FUNCTION__);
-    NSAssert(_whiteboardWidth > 0, @"_onEnlargePanGestureChanged, whiteboardWidth can not be zero!");
     static CGPoint pre;
     switch (panGesture.state) {
         case UIGestureRecognizerStateBegan:
@@ -377,7 +445,8 @@ static NSString *penImageName = @"pen";
                 break;
             }
             //update open angel
-            {
+            if (!self.currentOpenAngleLocked) {
+                //非锁定状态，才可以改变开合角度
                 CGPoint center = [self convertPoint:CGPointMake(self.bounds.size.width, 0) toView:self.superview];
                 CGFloat angle = [NXGeometryToolBoxHelper rotationAngleWithCenter:center startPoint:pre endPoint:cur];
                 CGFloat degree = RADIANS_TO_DEGREES(angle);
@@ -387,13 +456,24 @@ static NSString *penImageName = @"pen";
                 } else if (nextDegree >= 130) {
                     nextDegree = 130;
                 }
-                _openAngleInDegree = nextDegree;
+                
+                if (_openAngleInDegree != nextDegree) {
+                    _openAngleInDegree = nextDegree;
+                    //notify openAngleInDegree changed
+                    if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onOpenAngleChanged:)]) {
+                        [self.delegate geometryTool:self onOpenAngleChanged:_openAngleInDegree];
+                    }
+                }
             }
             //update rotation angle
             {
                 CGFloat angle = [NXGeometryToolBoxHelper rotationAngleWithCenter:self.layer.position startPoint:pre endPoint:cur];
                 _rotationAngle += angle;
                 self.layer.affineTransform = CGAffineTransformMakeRotation(_rotationAngle);
+                //notify rotation angle changed
+                if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onRotationAngleChanged:)]) {
+                    [self.delegate geometryTool:self onRotationAngleChanged:_rotationAngle];
+                }
             }
             [self _layoutNow];
             pre = cur;
@@ -402,14 +482,6 @@ static NSString *penImageName = @"pen";
         default:
             break;
     }
-
-    
-    
-    
-    
-    
-    
-    
 }
 
 - (void)_onDrawArcPanGestureChanged:(UIPanGestureRecognizer *)rotationGesture {
@@ -418,10 +490,19 @@ static NSString *penImageName = @"pen";
     
     //参考： https://ost.51cto.com/posts/89
     
+    
+    CGPoint point = [self.penImageView convertPoint:self.penImageView.penNibPoint toView:self.superview];
+    
+    
     static CGPoint pre;
     switch (rotationGesture.state) {
         case UIGestureRecognizerStateBegan:
+        {
             pre = [rotationGesture locationInView:self.superview];
+            if ([self.delegate respondsToSelector:@selector(geometryTool:onDrawArcBeganAtPoint:center:)]) {
+                [self.delegate geometryTool:self onDrawArcBeganAtPoint:point center:self.layer.position];
+            }
+        }
             break;
         case UIGestureRecognizerStateChanged:
         case UIGestureRecognizerStateEnded:
@@ -433,30 +514,42 @@ static NSString *penImageName = @"pen";
             CGFloat angle = [NXGeometryToolBoxHelper rotationAngleWithCenter:self.layer.position startPoint:pre endPoint:cur];
             self.rotationAngle += angle;
             pre = cur;
+            
+            //notify rotation angle changed
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onRotationAngleChanged:)]) {
+                [self.delegate geometryTool:self onRotationAngleChanged:_rotationAngle];
+            }
+            //notify draw arc changed
+            if (rotationGesture.state == UIGestureRecognizerStateChanged) {
+                if ([self.delegate respondsToSelector:@selector(geometryTool:onDrawArcMovedToPoint:)]) {
+                    [self.delegate geometryTool:self onDrawArcMovedToPoint:point];
+                }
+            } else if (rotationGesture.state == UIGestureRecognizerStateEnded) {
+                if ([self.delegate respondsToSelector:@selector(geometryTool:onDrawArcEndedAtPoint:)]) {
+                    [self.delegate geometryTool:self onDrawArcEndedAtPoint:point];
+                }
+            }
         }
             break;
         default:
             break;
     }
-
-    
-    
-    
 }
-
-
-
 
 #pragma mark -
 
 - (void)_onClickChangeLockStateButton:(UIButton *)sender {
-    //TODO:
     self.currentOpenAngleLocked = !self.currentOpenAngleLocked;
-    NSLog(@"%s", __PRETTY_FUNCTION__);
+    //notify lock state changed
+    if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onCurrentOpenAngleLockStateChanged:)]) {
+        [self.delegate geometryTool:self onCurrentOpenAngleLockStateChanged:self.currentOpenAngleLocked];
+    }
 }
 
 - (void)_onClickCloseButton:(UIButton *)sender {
-    NSLog(@"%s", __PRETTY_FUNCTION__);
+    if (self.delegate && [self.delegate respondsToSelector:@selector(geometryToolOnCloseButtonClicked:)]) {
+        [self.delegate geometryToolOnCloseButtonClicked:self];
+    }
 }
 
 
