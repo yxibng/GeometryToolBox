@@ -12,44 +12,16 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-
-@class NXProtractorView;
-@protocol NXProtractorViewDelegate <NSObject>
-
-//draw line
-
-- (void)protractorView:(NXProtractorView *)protractorView lineGestureBeganWithPoint:(CGPoint)point;
-- (void)protractorView:(NXProtractorView *)protractorView lineGestureMovedToPoint:(CGPoint)point;
-- (void)protractorView:(NXProtractorView *)protractorView lineGestureEndedWithPoint:(CGPoint)point;
-
-//draw arc
-
-- (void)protractorView:(NXProtractorView *)protractorView arcGestureBeganWithPoint:(CGPoint)point center:(CGPoint)center;
-- (void)protractorView:(NXProtractorView *)protractorView arcGestureMovedToPoint:(CGPoint)point;
-- (void)protractorView:(NXProtractorView *)protractorView arcGestureEndedWithPoint:(CGPoint)point;
-
-@end
-
-
-
-
-/*
- 量角器
- 直径范围 8-14cm
- 初次打开默认直径 8cm
- */
 @interface NXProtractorView : UIView<NXGeometryToolProtocol>
+/*
+ 每种工具可以打开多个
+ 该种类型的工具间， 通过tag来区分
+ */
+@property (nonatomic, assign) NSUInteger geometryToolTag;
 
-//创建的时候传入白板, 由此计算 whiteboardWidth
-- (instancetype)initWithWhiteboard:(UIView *)whiteboard;
 
-@property (nonatomic, assign, readonly) NXGeometryToolType geometryToolType;
-
-
-@property (nonatomic, weak) id<NXProtractorViewDelegate>protractorViewDelegate;
-
+//事件代理
 @property (nonatomic, weak) id<NXGeometryToolDelegate>delegate;
-
 
 /*
  当前 whiteboard 的宽度
@@ -60,7 +32,6 @@ NS_ASSUME_NONNULL_BEGIN
 /*
  当前视图的锚点在白板中的归一化位置
  白板切换，从 A 到 B，锚点相对位置不变
- 默认(0.5, 0.5)
  */
 @property (nonatomic, assign) CGPoint normPosition;
 
@@ -72,42 +43,35 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) CGFloat rotationAngle;
 
 /*
- 决定尺规工具的基准边长
- 1. 对直尺来说，是宽度
- 2. 对三角形，是短边长度
- 3. 对量角器，是半径
- 
- 更新此变量，会导致尺规工具自身大小发生变化。
- 改变量的设置需要参考各工具基准变长的取值范围 baseLengthRange。
- 
- 默认长度： 参考 NXGeometryToolLayout
+ 是否响应事件
+ 1. 按钮事件：旋转，放大，关闭, 锁定，取消锁定
+ 2. 拖移
+ 3. 允许划线
  */
-@property (nonatomic, assign) CGFloat normBaseSideLength;
+@property (nonatomic, assign) BOOL userActionAllowed;
 
-/*
- 关闭，放大，旋转按钮是否可用
- 默认： NO
- */
-@property (nonatomic, assign) BOOL operationButtonEnabled;
+//划线的宽度
+@property (nonatomic, assign) CGFloat drawLineWidth;
+
+@property (nonatomic, assign) CGFloat normBaseSideLength;
 
 // normBaseSideLength 取值范围
 @property (nonatomic, assign, readonly) NXGeometryToolBaseLengthRange baseLengthRange;
 
-@property (nonatomic, assign) CGFloat drawLineWidth;
+@property (nonatomic, assign) CGFloat measurer1Angle;
+@property (nonatomic, assign) CGFloat measurer2Angle;
 
+//同步测量角度1
+- (void)syncMeasurer1Angle:(CGFloat)measurer1Angle;
+//同步测量角度2
+- (void)syncMeasurer2Angle:(CGFloat)measurer2Angle;
 
-//白板变更
-- (void)changeWhiteboard:(UIView *)whiteboard;
-
-//同步角度旋转Z
+//同步旋转角度
 - (void)syncRotationAngle:(CGFloat)rotationAngle;
-
-//同步位置更新
-- (void)syncPosition:(CGPoint)normPosition;
-
-//同步基准变长更新
-- (void)syncBaseSideLength:(CGFloat)normBaseSideLength;
-
+//同步锚点位置
+- (void)syncNormPosition:(CGPoint)normPosition;
+//同步基准边长
+- (void)syncNormBaseSideLength:(CGFloat)normBaseSideLength;
 
 @end
 

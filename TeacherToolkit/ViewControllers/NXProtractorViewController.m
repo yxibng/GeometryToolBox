@@ -8,8 +8,9 @@
 #import "NXProtractorViewController.h"
 #import "NXProtractorView.h"
 #import "NXWhiteboardView.h"
+#import "NXGeometryToolBoxHelper.h"
 
-@interface NXProtractorViewController ()<NXProtractorViewDelegate>
+@interface NXProtractorViewController ()<NXGeometryToolDelegate>
 
 @property (nonatomic, strong) NXProtractorView *protractorView;
 @property (nonatomic, assign) CGFloat width;
@@ -26,9 +27,11 @@
     NXWhiteboardView *whiteboad = (NXWhiteboardView *)self.view;
     whiteboad.drawLineWidth = drawLineWidth;
 
-    _protractorView = [[NXProtractorView alloc] initWithWhiteboard:self.view];
-    _protractorView.protractorViewDelegate = self;
+    _protractorView = [[NXProtractorView alloc] init];
+    _protractorView.delegate = self;
+    _protractorView.userActionAllowed = YES;
     _protractorView.drawLineWidth = drawLineWidth;
+    [self.view addSubview:_protractorView];
 }
 
 - (void)viewDidLayoutSubviews {
@@ -36,55 +39,74 @@
     
     CGFloat width = self.view.bounds.size.width;
     CGFloat height = self.view.bounds.size.height;
+    
+    _protractorView.whiteboardWidth = width;
+    
     if (_width != width) {
         _width = width;
         [_protractorView setNormPosition:CGPointMake(0.5, 0.5 * height / width)];
     }
-    [_protractorView setWhiteboardWidth:self.view.bounds.size.width];}
-
-/*
-#pragma mark - Navigation
-
-// In a storyboard-based application, you will often want to do a little preparation before navigation
-- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
-    // Get the new view controller using [segue destinationViewController].
-    // Pass the selected object to the new view controller.
 }
-*/
 
 
-//draw line
+- (void)geometryTool:(nonnull UIView<NXGeometryToolProtocol> *)geometryTool onNormPositionChanged:(CGPoint)normPosition {
+    //TODO: send message
+}
 
-- (void)protractorView:(NXProtractorView *)protractorView lineGestureBeganWithPoint:(CGPoint)point {
+- (void)geometryTool:(nonnull UIView<NXGeometryToolProtocol> *)geometryTool onRotationAngleChanged:(CGFloat)rotationAngle {
+    //TODO: send message
+}
+
+- (void)geometryToolOnCloseButtonClicked:(nonnull UIView<NXGeometryToolProtocol> *)geometryTool {
+    //TODO: send message and remove
+    [geometryTool removeFromSuperview];
+}
+
+//扩大，缩小事件
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onNormBaseSideLengthChanged:(CGFloat)normBaseSideLength {
+    //TODO: send message
+}
+
+//画线事件
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawLineBeganAtPoint:(CGPoint)point {
     NXWhiteboardView *whiteboad = (NXWhiteboardView *)self.view;
     [whiteboad gestureBeganWithPoint:point];
-
 }
 
-- (void)protractorView:(NXProtractorView *)protractorView lineGestureMovedToPoint:(CGPoint)point {
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawLineMovedToPoint:(CGPoint)point {
     NXWhiteboardView *whiteboad = (NXWhiteboardView *)self.view;
     [whiteboad gestureMovedToPoint:point];
+    
 }
 
-- (void)protractorView:(NXProtractorView *)protractorView lineGestureEndedWithPoint:(CGPoint)point {
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawLineEndedAtPoint:(CGPoint)point {
     NXWhiteboardView *whiteboad = (NXWhiteboardView *)self.view;
     [whiteboad gestureEndedWithPoint:point];
 }
 
-//draw arc
 
-- (void)protractorView:(NXProtractorView *)protractorView arcGestureBeganWithPoint:(CGPoint)point center:(CGPoint)center {
+//draw arc
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawArcBeganAtPoint:(CGPoint)point center:(CGPoint)center {
     NXWhiteboardView *whiteboad = (NXWhiteboardView *)self.view;
     [whiteboad arcGestureBeganWithPoint:point center:center];
 }
-- (void)protractorView:(NXProtractorView *)protractorView arcGestureMovedToPoint:(CGPoint)point {
+
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawArcMovedToPoint:(CGPoint)point {
     NXWhiteboardView *whiteboad = (NXWhiteboardView *)self.view;
     [whiteboad arcGestureMovedToPoint:point];
 }
-- (void)protractorView:(NXProtractorView *)protractorView arcGestureEndedWithPoint:(CGPoint)point {
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawArcEndedAtPoint:(CGPoint)point {
     NXWhiteboardView *whiteboad = (NXWhiteboardView *)self.view;
     [whiteboad arcGestureEndedWithPoint:point];
 }
 
+//measure angle
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onMeasurer1AngleChanged:(CGFloat)measurer1Angle {
+    NSLog(@"measurer1Angle in degree = %f", RADIANS_TO_DEGREES(measurer1Angle));
+}
+
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onMeasurer2AngleChanged:(CGFloat)measurer2Angle {
+    NSLog(@"measurer2Angle in degree = %f", RADIANS_TO_DEGREES(measurer2Angle));
+}
 
 @end

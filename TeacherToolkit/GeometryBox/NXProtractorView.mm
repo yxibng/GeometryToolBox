@@ -11,12 +11,8 @@
 
 @interface NXProtractorView ()<UIGestureRecognizerDelegate>
 
-@property (nonatomic, weak) UIView *whiteboard;
-
 @property (nonatomic, strong) UIButton *closeButton;
-
 @property (nonatomic, strong) UIButton *enlargeButton;
-
 @property (nonatomic, strong) UIButton *rotationButton;
 
 @property (nonatomic, strong) UIGestureRecognizer *moveGesture;
@@ -25,100 +21,89 @@
 
 
 @property (nonatomic, assign) NXGeometryToolType geometryToolType;
-
+@property (nonatomic, assign) NXGeometryToolBaseLengthRange baseLengthRange;
 
 @property (nonatomic, strong) UILabel *angleLabel_1;
 @property (nonatomic, strong) UILabel *angleLabel_2;
 
-@property (nonatomic, assign) CGFloat angle1InDegree;
-@property (nonatomic, assign) CGFloat angle2InDegree;
-
-
 @end
+
+
 @implementation NXProtractorView
 
-//创建的时候传入白板, 由此计算 whiteboardWidth
-- (instancetype)initWithWhiteboard:(UIView *)whiteboard {
-    
-    if (self = [super initWithFrame:CGRectZero]) {
-        
-        
-        _angle1InDegree = 0;
-        _angle2InDegree = 0;
-        
-        _geometryToolType = NXGeometryToolTypeProtractor;
-        _whiteboardWidth = whiteboard.bounds.size.width;
-        _normPosition = CGPointMake(0.5, 1);
-        _rotationAngle = 0;
-        
-        _normBaseSideLength = NXGeometryBox::ProtractorLayout::defaultNormRadius;
-        _baseLengthRange = (NXGeometryToolBaseLengthRange) {
-            .normMinLength = NXGeometryBox::ProtractorLayout::radiusRange().normMinLength,
-            .normMaxLength = NXGeometryBox::ProtractorLayout::radiusRange().normMaxLength
-        };
-        
-        _operationButtonEnabled = YES;
-        
-        self.layer.anchorPoint = CGPointMake(0.5, 1);
-        self.backgroundColor = UIColor.clearColor;
-//        self.backgroundColor = UIColor.redColor;
-        
-        UIPanGestureRecognizer *moveGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onMovePanGestureChanged:)];
-        moveGesture.delegate = self;
-        [self addGestureRecognizer:moveGesture];
-        _moveGesture = moveGesture;
-        
-        
-        UIPanGestureRecognizer *drawArcGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onDrawArcGestureChanged:)];
-        drawArcGesture.delegate = self;
-        [self addGestureRecognizer:drawArcGesture];
-        _drawArcGesture = drawArcGesture;
-        
-        
-        UIPanGestureRecognizer *drawLineGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onDrawLineGestureChanged:)];
-        drawLineGesture.delegate = self;
-        [self addGestureRecognizer:drawLineGesture];
-        _drawLineGesture = drawLineGesture;
-        
-        
-
-        [self changeWhiteboard:whiteboard];
+- (instancetype)initWithFrame:(CGRect)frame {
+    if (self = [super initWithFrame:frame]) {
+        [self _setup];
     }
     return self;
 }
 
-
-//白板变更
-- (void)changeWhiteboard:(UIView *)whiteboard {
-    
-    NSAssert(whiteboard != nil, @"changeWhiteboard, whiteboard can not be nil!");
-    _whiteboard = whiteboard;
-    
-    CGFloat whiteboardWidth = whiteboard.bounds.size.width;
-    NSAssert(whiteboardWidth > 0, @"changeWhiteboard, whiteboardWidth can not be zero!");
-    _whiteboardWidth = whiteboardWidth;
-    
-    [whiteboard addSubview:self];
-    
-    [self _recalculate];
-    [self _redraw];
+- (instancetype)initWithCoder:(NSCoder *)coder {
+    if (self = [super initWithCoder:coder]) {
+        [self _setup];
+    }
+    return self;
 }
 
-//同步角度旋转
+- (void)_setup {
+    
+    self.layer.anchorPoint = CGPointMake(0.5, 1);
+    self.backgroundColor = UIColor.clearColor;
+    self.userInteractionEnabled = _userActionAllowed = NO;
+    
+    _rotationAngle = 0;
+    _measurer1Angle = 0;
+    _measurer2Angle = 0;
+    
+    _geometryToolType = NXGeometryToolTypeProtractor;
+    _normBaseSideLength = NXGeometryBox::ProtractorLayout::defaultNormRadius;
+    _baseLengthRange = (NXGeometryToolBaseLengthRange) {
+        .normMinLength = NXGeometryBox::ProtractorLayout::radiusRange().normMinLength,
+        .normMaxLength = NXGeometryBox::ProtractorLayout::radiusRange().normMaxLength
+    };
+    
+    UIPanGestureRecognizer *moveGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onMovePanGestureChanged:)];
+    moveGesture.delegate = self;
+    [self addGestureRecognizer:moveGesture];
+    _moveGesture = moveGesture;
+    
+    
+    UIPanGestureRecognizer *drawArcGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onDrawArcGestureChanged:)];
+    drawArcGesture.delegate = self;
+    [self addGestureRecognizer:drawArcGesture];
+    _drawArcGesture = drawArcGesture;
+    
+    
+    UIPanGestureRecognizer *drawLineGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onDrawLineGestureChanged:)];
+    drawLineGesture.delegate = self;
+    [self addGestureRecognizer:drawLineGesture];
+    _drawLineGesture = drawLineGesture;
+}
+
+//同步测量角度1
+- (void)syncMeasurer1Angle:(CGFloat)measurer1Angle {
+    NSAssert(measurer1Angle >=0 && measurer1Angle <= M_PI, @"measurer1Angle should be [0,M_PI]");
+    self.measurer1Angle = measurer1Angle;
+}
+//同步测量角度2
+- (void)syncMeasurer2Angle:(CGFloat)measurer2Angle {
+    NSAssert(measurer2Angle >=0 && measurer2Angle <= M_PI, @"measurer2Angle should be [0,M_PI]");
+    self.measurer2Angle = measurer2Angle;
+}
+
+//同步旋转角度
 - (void)syncRotationAngle:(CGFloat)rotationAngle {
-    
+    self.rotationAngle = rotationAngle;
 }
-
-//同步位置更新
-- (void)syncPosition:(CGPoint)normPosition {
-    
+//同步锚点位置
+- (void)syncNormPosition:(CGPoint)normPosition {
+    self.normPosition = normPosition;
 }
-
-//同步基准变长更新
-- (void)syncBaseSideLength:(CGFloat)normBaseSideLength {
-    
+//同步基准边长
+- (void)syncNormBaseSideLength:(CGFloat)normBaseSideLength {
+    NSAssert(normBaseSideLength >= _baseLengthRange.normMinLength && normBaseSideLength <= _baseLengthRange.normMaxLength, @"normBaseSideLength should be [%f, %f]", _baseLengthRange.normMinLength, _baseLengthRange.normMaxLength);
+    self.normBaseSideLength = normBaseSideLength;
 }
-
 
 - (void)_recalculate {
     
@@ -201,7 +186,7 @@
     CGPoint start, end;
     for (int i = 1; i< 180; i++) {
         
-        const CGFloat scaleMarkLength = [self normScaleMarkLengthWithIndex: i] * whiteboardWidth;
+        const CGFloat scaleMarkLength = [self _normScaleMarkLengthWithIndex: i] * whiteboardWidth;
         CGFloat startRadius = 0;
         if (i % 10 == 0) {
             startRadius = innerRadius;
@@ -240,18 +225,17 @@
         const CGFloat endPointRadius = (_normBaseSideLength - NXGeometryBox::ProtractorLayout::AngleMeasurer::normRadius * 2) * whiteboardWidth;
         //中心点
         {
-            CGFloat degree = _angle1InDegree;
+            
             CGContextMoveToPoint(context, radius, radius);
-            CGFloat x = radius + endPointRadius * cos(DEGREES_TO_RADIANS(degree));
-            CGFloat y = radius - endPointRadius * sin(DEGREES_TO_RADIANS(degree));
+            CGFloat x = radius + endPointRadius * cos(self.measurer1Angle);
+            CGFloat y = radius - endPointRadius * sin(self.measurer1Angle);
             CGContextAddLineToPoint(context, x, y);
         }
         
         {
-            CGFloat degree = _angle2InDegree;
             CGContextMoveToPoint(context, radius, radius);
-            CGFloat x = radius + endPointRadius * cos(DEGREES_TO_RADIANS(degree));
-            CGFloat y = radius - endPointRadius * sin(DEGREES_TO_RADIANS(degree));
+            CGFloat x = radius + endPointRadius * cos(self.measurer2Angle);
+            CGFloat y = radius - endPointRadius * sin(self.measurer2Angle);
             CGContextAddLineToPoint(context, x, y);
         }
         CGContextSetStrokeColorWithColor(context, NXGeometryToolDrawStyle.greenColor.CGColor);
@@ -259,17 +243,12 @@
         CGContextStrokePath(context);
     }
     
-    
-    
-    
-    
-    
     //刻度值，内圈， 逆时针
     const int indexForCalculateSmallTextSize = 80;
     const CGRect innerTextBounds = [self _layerWithIndex:indexForCalculateSmallTextSize].bounds;
     
     //中间弧度半径 + 刻度长度 + gap + textHeight / 2
-    const CGFloat innerTextRadius = middleRadius + ([self normScaleMarkLengthWithIndex:indexForCalculateSmallTextSize] + NXGeometryBox::DrawStyle::normGapBetweenTextAndScaleMark) * whiteboardWidth + CGRectGetHeight(innerTextBounds) / 2;
+    const CGFloat innerTextRadius = middleRadius + ([self _normScaleMarkLengthWithIndex:indexForCalculateSmallTextSize] + NXGeometryBox::DrawStyle::normGapBetweenTextAndScaleMark) * whiteboardWidth + CGRectGetHeight(innerTextBounds) / 2;
     
     for (int i = 0; i <= 180; i = i + 10) {
         if (i == 90) {
@@ -303,7 +282,7 @@
     }
     
     //外圈半径 - 刻度 - gap - textHeight / 2
-    const CGFloat outerTextRadius = outerRadius - ([self normScaleMarkLengthWithIndex:indexForCalculateSmallTextSize] + NXGeometryBox::DrawStyle::normGapBetweenTextAndScaleMark) * whiteboardWidth - CGRectGetHeight(innerTextBounds) / 2;
+    const CGFloat outerTextRadius = outerRadius - ([self _normScaleMarkLengthWithIndex:indexForCalculateSmallTextSize] + NXGeometryBox::DrawStyle::normGapBetweenTextAndScaleMark) * whiteboardWidth - CGRectGetHeight(innerTextBounds) / 2;
     //刻度值，外圈， 顺时针
     for (int i = 0; i <= 180; i = i + 10) {
         if (i == 90) {
@@ -375,15 +354,12 @@
     x = diffX + buttonRadius * cos(DEGREES_TO_RADIANS(NXGeometryBox::ProtractorLayout::closeAndRotationButtonDegree));
     y = radius - buttonRadius * sin(DEGREES_TO_RADIANS(NXGeometryBox::ProtractorLayout::closeAndRotationButtonDegree));
     self.rotationButton.layer.position = CGPointMake(x, y);
-    
-    
-    
+
     {
         const CGFloat angleLableSideLength = 2 * NXGeometryBox::ProtractorLayout::AngleMeasurer::normRadius *  whiteboardWidth;
-        
         const CGFloat angleRadius = (_normBaseSideLength - NXGeometryBox::ProtractorLayout::AngleMeasurer::normRadius) * whiteboardWidth;
         
-        void (^configLable)(CGFloat degree, UILabel *label) = ^(CGFloat degree, UILabel *label) {
+        void (^configLable)(CGFloat angle, UILabel *label) = ^(CGFloat angle, UILabel *label) {
             
             label.bounds = CGRectMake(0, 0, angleLableSideLength , angleLableSideLength);
             label.layer.cornerRadius = angleLableSideLength / 2;
@@ -391,8 +367,8 @@
             label.layer.borderColor = NXGeometryToolDrawStyle.greenColor.CGColor;
             label.layer.borderWidth = 2.0;
             
-            CGFloat x = radius + angleRadius * cos(DEGREES_TO_RADIANS(degree));
-            CGFloat y = radius - angleRadius * sin(DEGREES_TO_RADIANS(degree));
+            CGFloat x = radius + angleRadius * cos(angle);
+            CGFloat y = radius - angleRadius * sin(angle);
             label.layer.position = CGPointMake(x, y);
             
             const CGFloat fontSize = NXGeometryBox::ProtractorLayout::AngleMeasurer::normFontSize * whiteboardWidth;
@@ -401,12 +377,13 @@
             label.backgroundColor = UIColor.clearColor;
         };
         
-        configLable(_angle1InDegree, self.angleLabel_1);
-        configLable(_angle2InDegree, self.angleLabel_2);
+        configLable(_measurer1Angle, self.angleLabel_1);
+        configLable(_measurer2Angle, self.angleLabel_2);
         
         //update degree
-        int angleInDegree = abs(_angle1InDegree - _angle2InDegree);
-        _angleLabel_1.text = _angleLabel_2.text = @(angleInDegree).stringValue;
+        CGFloat angleDiff = abs(_measurer1Angle - _measurer2Angle);
+        int degree = RADIANS_TO_DEGREES(angleDiff);
+        _angleLabel_1.text = _angleLabel_2.text = @(degree).stringValue;
     }
 }
 
@@ -430,7 +407,7 @@
 
 
 #pragma mark -
-- (CGFloat)normScaleMarkLengthWithIndex:(int)index {
+- (CGFloat)_normScaleMarkLengthWithIndex:(int)index {
     if (index % 10 == 0) {
         return NXGeometryBox::ScaleMarkLength::normLengthForType1cm;
     } else if (index % 5 == 0) {
@@ -483,7 +460,6 @@
     CGFloat distance = sqrt(dx * dx + dy * dy);
 
     if (gestureRecognizer == self.drawArcGesture) {
-        
         //外圈半径 - lengthForType1mm
         CGFloat minRadius = outerRadius - NXGeometryBox::ScaleMarkLength::normLengthForType1mm * whiteboardWidth;
         //外圈半径 + extDrawAreaHeight
@@ -516,10 +492,6 @@
     return NO;
 }
 
-
-
-
-
 #pragma mark -
 
 - (void)setWhiteboardWidth:(CGFloat)whiteboardWidth {
@@ -538,6 +510,60 @@
     _normPosition = normPosition;
     [self _recalculate];
     [self _redraw];
+}
+
+- (void)setNormBaseSideLength:(CGFloat)normBaseSideLength {
+    if (_normBaseSideLength == normBaseSideLength) {
+        return;
+    }
+    if (normBaseSideLength >= _baseLengthRange.normMinLength && normBaseSideLength <= _baseLengthRange.normMaxLength) {
+        _normBaseSideLength = normBaseSideLength;
+        [self _recalculate];
+        [self _redraw];
+    }
+}
+
+- (void)setRotationAngle:(CGFloat)rotationAngle {
+    if (_rotationAngle == rotationAngle) {
+        return;
+    }
+    _rotationAngle = rotationAngle;
+    [self _recalculate];
+    [self _redraw];
+}
+
+
+- (void)setUserActionAllowed:(BOOL)userActionAllowed {
+    _userActionAllowed = userActionAllowed;
+    self.userInteractionEnabled = userActionAllowed;
+}
+
+- (void)setMeasurer1Angle:(CGFloat)measurer1Angle {
+    if (_measurer1Angle == measurer1Angle) {
+        return;
+    }
+    
+    if (measurer1Angle < 0 || measurer1Angle > M_PI) {
+        return;
+    }
+    
+    _measurer1Angle = measurer1Angle;
+    [self setNeedsLayout];
+    [self layoutIfNeeded];
+}
+
+
+- (void)setMeasurer2Angle:(CGFloat)measurer2Angle {
+    if (_measurer2Angle == measurer2Angle) {
+        return;
+    }
+    if (measurer2Angle < 0 || measurer2Angle > M_PI) {
+        return;
+    }
+    _measurer2Angle = measurer2Angle;
+    [self setNeedsLayout];
+    [self layoutIfNeeded];
+
 }
 
 - (UIButton *)closeButton {
@@ -580,14 +606,12 @@
 #pragma mark -
 
 - (void)_onClickCloseButton:(UIButton *)button {
-    NSLog(@"%s", __PRETTY_FUNCTION__);
     if (self.delegate && [self.delegate respondsToSelector:@selector(geometryToolOnCloseButtonClicked:)]) {
         [self.delegate geometryToolOnCloseButtonClicked:self];
     }
 }
 
 - (void)_onEnlargePanGestureChanged:(UIPanGestureRecognizer *)panGesture {
-    NSLog(@"%s", __PRETTY_FUNCTION__);
     NSAssert(_whiteboardWidth > 0, @"_onEnlargePanGestureChanged, whiteboardWidth can not be zero!");
     CGPoint translation = [panGesture translationInView:self];
     CGFloat ratio = -translation.y / _whiteboardWidth;
@@ -597,6 +621,10 @@
         _normBaseSideLength = newWidth;
         [self _recalculate];
         [self _redraw];
+        //notify base side length change
+        if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onNormBaseSideLengthChanged:)]) {
+            [self.delegate geometryTool:self onNormBaseSideLengthChanged:_normBaseSideLength];
+        }
     }
 }
 
@@ -618,6 +646,11 @@
             _rotationAngle += angle;
             self.layer.affineTransform = CGAffineTransformMakeRotation(_rotationAngle);
             pre = cur;
+            
+            //notify rotation angle changed
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onRotationAngleChanged:)]) {
+                [self.delegate geometryTool:self onRotationAngleChanged:_rotationAngle];
+            }
         }
             break;
         default:
@@ -636,14 +669,19 @@
     [moveGesture setTranslation:CGPointZero inView:self];
     
     _normPosition = CGPointMake(anchorPoint.x / _whiteboardWidth, anchorPoint.y / _whiteboardWidth);
+    //notify norm position changed
+    if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onNormPositionChanged:)]) {
+        [self.delegate geometryTool:self onNormPositionChanged:_normPosition];
+    }
+
 }
 
 
 
 - (void)_onRotationAngleLabelGestureChanged:(UIPanGestureRecognizer *)panGesture {
     
-    const CGFloat minDegree = 0;
-    const CGFloat maxDegree = 180;
+    const CGFloat minAngle = 0;
+    const CGFloat maxAngle = M_PI;
     //FIXME: 这里的角度计算有问题
     if (panGesture.view == _angleLabel_1) {
         
@@ -658,13 +696,17 @@
         }
         CGFloat cosx = x / self.bounds.size.height;
         CGFloat angle = acos(cosx);
-        CGFloat nextDegree = ceil(RADIANS_TO_DEGREES(angle));
         
-        if (nextDegree >= minDegree && nextDegree <= maxDegree) {
-            _angle1InDegree = nextDegree;
+        if (angle >= minAngle && angle <= maxAngle) {
+            _measurer1Angle = angle;
             [self setNeedsLayout];
             [self layoutIfNeeded];
             [self setNeedsDisplay];
+            
+            //notify measurer1Angle changed
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onMeasurer1AngleChanged:)]) {
+                [self.delegate geometryTool:self onMeasurer1AngleChanged:_measurer1Angle];
+            }
         }
     }
     
@@ -675,19 +717,21 @@
         if (x < -self.bounds.size.height) {
             x = -self.bounds.size.height;
         }
-        
         if (x > self.bounds.size.height) {
             x = self.bounds.size.height;
         }
         CGFloat cosx = x / self.bounds.size.height;
         CGFloat angle = acos(cosx);
-        CGFloat nextDegree = ceil(RADIANS_TO_DEGREES(angle));
-        
-        if (nextDegree >= minDegree && nextDegree <= maxDegree) {
-            _angle2InDegree = nextDegree;
+        if (angle >= minAngle && angle <= maxAngle) {
+            _measurer2Angle = angle;
             [self setNeedsLayout];
             [self layoutIfNeeded];
             [self setNeedsDisplay];
+            
+            //notify measurer2Angle changed
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onMeasurer2AngleChanged:)]) {
+                [self.delegate geometryTool:self onMeasurer2AngleChanged:_measurer2Angle];
+            }
         }
     }
 }
@@ -718,61 +762,53 @@
     location.x = x;
     location.y = y;
     
-    CGPoint locationInSuperView = [self convertPoint:location toView:self.superview];
-    NSLog(@"location %@", NSStringFromCGPoint(location));
+    CGPoint locationInSuperview = [self convertPoint:location toView:self.superview];
+    
     switch (panGesture.state) {
         case UIGestureRecognizerStateBegan:
-            NSLog(@"began");
-            [self.protractorViewDelegate protractorView:self arcGestureBeganWithPoint:locationInSuperView center:self.layer.position];
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawArcBeganAtPoint:center:)]) {
+                [self.delegate geometryTool:self onDrawArcBeganAtPoint:locationInSuperview center:self.layer.position];
+            }
             break;
         case UIGestureRecognizerStateChanged:
-            NSLog(@"changed");
-            [self.protractorViewDelegate protractorView:self arcGestureMovedToPoint:locationInSuperView];
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawArcMovedToPoint:)]) {
+                [self.delegate geometryTool:self onDrawArcMovedToPoint:locationInSuperview];
+            }
+
             break;
         case UIGestureRecognizerStateEnded:
-            NSLog(@"ended");
-            [self.protractorViewDelegate protractorView:self arcGestureEndedWithPoint:locationInSuperView];
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawArcEndedAtPoint:)]) {
+                [self.delegate geometryTool:self onDrawArcEndedAtPoint:locationInSuperview];
+            }
             break;
-            
-        case UIGestureRecognizerStateCancelled:
-            NSLog(@"cancelled");
-            break;
-
         default:
             break;
     }
-
 }
 
-
 - (void)_onDrawLineGestureChanged:(UIPanGestureRecognizer *)panGesture {
-    
     CGPoint location = [panGesture locationInView:self];
     location.y = self.bounds.size.height;
-    CGPoint locationInSuperView = [self convertPoint:location toView:self.superview];
-    NSLog(@"location %@", NSStringFromCGPoint(location));
+    CGPoint locationInSuperview = [self convertPoint:location toView:self.superview];
     switch (panGesture.state) {
         case UIGestureRecognizerStateBegan:
-            NSLog(@"began");
-            [self.protractorViewDelegate protractorView:self lineGestureBeganWithPoint:locationInSuperView];
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineBeganAtPoint:)]) {
+                [self.delegate geometryTool:self onDrawLineBeganAtPoint:locationInSuperview];
+            }
             break;
         case UIGestureRecognizerStateChanged:
-            NSLog(@"changed");
-            [self.protractorViewDelegate protractorView:self lineGestureMovedToPoint:locationInSuperView];
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineMovedToPoint:)]) {
+                [self.delegate geometryTool:self onDrawLineMovedToPoint:locationInSuperview];
+            }
             break;
         case UIGestureRecognizerStateEnded:
-            NSLog(@"ended");
-            [self.protractorViewDelegate protractorView:self lineGestureEndedWithPoint:locationInSuperView];
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineEndedAtPoint:)]) {
+                [self.delegate geometryTool:self onDrawLineEndedAtPoint:locationInSuperview];
+            }
             break;
-            
-        case UIGestureRecognizerStateCancelled:
-            NSLog(@"cancelled");
-            break;
-
         default:
             break;
     }
-
 }
 
 
@@ -788,7 +824,7 @@
         _angleLabel_1.textAlignment = NSTextAlignmentCenter;
         UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onRotationAngleLabelGestureChanged:)];
         [_angleLabel_1 addGestureRecognizer:pan];
-        _angleLabel_1.userInteractionEnabled = _operationButtonEnabled;
+        _angleLabel_1.userInteractionEnabled = YES;
         [self addSubview:_angleLabel_1];
     }
     return _angleLabel_1;
@@ -803,7 +839,7 @@
         _angleLabel_2.textAlignment = NSTextAlignmentCenter;
         UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onRotationAngleLabelGestureChanged:)];
         [_angleLabel_2 addGestureRecognizer:pan];
-        _angleLabel_2.userInteractionEnabled = _operationButtonEnabled;
+        _angleLabel_2.userInteractionEnabled = YES;
         [self addSubview:_angleLabel_2];
     }
     return _angleLabel_2;

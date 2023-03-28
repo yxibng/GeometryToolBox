@@ -125,13 +125,11 @@
     }
     
     
-    
-    
     if (CGPointEqualToPoint(self.startPoint, CGPointZero) &&
         CGPointEqualToPoint(self.endPoint, CGPointZero)) {
         return;
     }
-
+    
     CGContextRef context = UIGraphicsGetCurrentContext();
     CGContextBeginPath(context);
     CGContextSetLineWidth(context, self.drawLineWidth);
@@ -139,12 +137,6 @@
     CGContextMoveToPoint(context, _startPoint.x, _startPoint.y);
     CGContextAddLineToPoint(context, _endPoint.x, _endPoint.y);
     CGContextStrokePath(context);
-    
-    
-
-    
-    
-    
 }
 
 @end
