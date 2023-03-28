@@ -13,92 +13,99 @@
 
 @interface NXRightTriangleView ()<UIGestureRecognizerDelegate>
 
-@property (nonatomic, weak) UIView *whiteboard;
-
 @property (nonatomic, strong) UIButton *closeButton;
-
 @property (nonatomic, strong) UIButton *enlargeButton;
-
 @property (nonatomic, strong) UIButton *rotationButton;
 
 @property (nonatomic, strong) UIGestureRecognizer *moveGesture;
 
 @property (nonatomic, assign) NXGeometryToolType geometryToolType;
 
+@property (nonatomic, strong) UIPanGestureRecognizer *leftDrawLineGesture;
+@property (nonatomic, strong) UIPanGestureRecognizer *bottomDrawLineGesture;
+@property (nonatomic, strong) UIPanGestureRecognizer *hypotenuseDrawLineGesture;
+
 @end
 
 @implementation NXRightTriangleView
 
-//创建的时候传入白板, 由此计算 whiteboardWidth
-- (instancetype)initWithWhiteboard:(UIView *)whiteboard {
-    
-    if (self = [super initWithFrame:CGRectZero]) {
-        
-        _geometryToolType = NXGeometryToolTypeRightTriangle;
-        _whiteboardWidth = whiteboard.bounds.size.width;
-        _normPosition = CGPointMake(0.5, 0.5);
-        _rotationAngle = 0;
-        
-        _normBaseSideLength = NXGeometryBox::RightTriangleLayout::defaultShortCatetoNormHeight();
-        _baseLengthRange = (NXGeometryToolBaseLengthRange) {
-            .normMinLength = NXGeometryBox::RightTriangleLayout::normHeightRange().normMinLength,
-            .normMaxLength = NXGeometryBox::RightTriangleLayout::normHeightRange().normMaxLength
-        };
-        
-        _operationButtonEnabled = NO;
-        
-        self.layer.anchorPoint = CGPointMake(0, 1);
-        self.backgroundColor = UIColor.clearColor;
-        
-        UIPanGestureRecognizer *moveGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onMovePanGestureChanged:)];
-        moveGesture.delegate = self;
-        [self addGestureRecognizer:moveGesture];
-        _moveGesture = moveGesture;
-        
-        
-        [self changeWhiteboard:whiteboard];
+- (instancetype)initWithFrame:(CGRect)frame {
+    if (self = [super initWithFrame:frame]) {
+        [self _setup];
     }
     return self;
 }
 
 
-//白板变更
-- (void)changeWhiteboard:(UIView *)whiteboard {
-    
-    NSAssert(whiteboard != nil, @"changeWhiteboard, whiteboard can not be nil!");
-    _whiteboard = whiteboard;
-    
-    CGFloat whiteboardWidth = whiteboard.bounds.size.width;
-    NSAssert(whiteboardWidth > 0, @"changeWhiteboard, whiteboardWidth can not be zero!");
-    _whiteboardWidth = whiteboardWidth;
-    
-    [whiteboard addSubview:self];
-    
-    [self _recalculate];
-    [self _redraw];
+- (instancetype)initWithCoder:(NSCoder *)coder {
+    if (self = [super initWithCoder:coder]) {
+        [self _setup];
+    }
+    return self;
 }
+
+- (void)_setup {
+    self.layer.anchorPoint = CGPointMake(0, 1);
+    self.backgroundColor = UIColor.clearColor;
+    self.userInteractionEnabled = _userActionAllowed = NO;
+    
+    _geometryToolType = NXGeometryToolTypeRightTriangle;
+    _rotationAngle = 0;
+
+    _normBaseSideLength = NXGeometryBox::RightTriangleLayout::defaultShortCatetoNormHeight();
+    _baseLengthRange = (NXGeometryToolBaseLengthRange) {
+        .normMinLength = NXGeometryBox::RightTriangleLayout::normHeightRange().normMinLength,
+        .normMaxLength = NXGeometryBox::RightTriangleLayout::normHeightRange().normMaxLength
+    };
+    
+    //move gesture
+    {
+        UIPanGestureRecognizer *moveGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onMovePanGestureChanged:)];
+        moveGesture.delegate = self;
+        [self addGestureRecognizer:moveGesture];
+        _moveGesture = moveGesture;
+    }
+
+    //draw line gestures
+    {
+        UIPanGestureRecognizer *(^createDrawLineGesture)() = ^{
+            UIPanGestureRecognizer *drawLineGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(_onDrawLinePanGestureChanged:)];
+            drawLineGesture.delegate = self;
+            return drawLineGesture;
+        };
+        
+        _leftDrawLineGesture = createDrawLineGesture();
+        [self addGestureRecognizer:_leftDrawLineGesture];
+        
+        _bottomDrawLineGesture = createDrawLineGesture();
+        [self addGestureRecognizer:_bottomDrawLineGesture];
+        
+        _hypotenuseDrawLineGesture = createDrawLineGesture();
+        [self addGestureRecognizer:_hypotenuseDrawLineGesture];
+    }
+    
+
+}
+
 
 //同步角度旋转
 - (void)syncRotationAngle:(CGFloat)rotationAngle {
-    
+    self.rotationAngle = rotationAngle;
 }
 
 //同步位置更新
-- (void)syncPosition:(CGPoint)normPosition {
-    
+- (void)syncNormPosition:(CGPoint)normPosition {
+    self.normPosition = normPosition;
 }
 
 //同步基准变长更新
-- (void)syncBaseSideLength:(CGFloat)normBaseSideLength {
-    
+- (void)syncNormBaseSideLength:(CGFloat)normBaseSideLength {
+    self.normBaseSideLength = normBaseSideLength;
 }
-
 
 - (void)_recalculate {
     
-    
     const CGFloat whiteboardWidth = self.whiteboardWidth;
-    
     CGFloat x = whiteboardWidth * self.normPosition.x;
     CGFloat y = whiteboardWidth * self.normPosition.y;
     
@@ -166,7 +173,7 @@
             //画刻度, 从下往上画
             start.x = 0;
             start.y = end.y = rect.size.height -  (mmWidth * i + startPadding);
-            CGFloat scaleMarkLength = whiteboardWidth * [self normScaleMarkLengthWithIndex:i];
+            CGFloat scaleMarkLength = whiteboardWidth * [self _normScaleMarkLengthWithIndex:i];
             end.x = start.x + scaleMarkLength;
             
             if (i % 50 == 0) {
@@ -223,7 +230,7 @@
             start.x = end.x = mmWidth *i + startPadding;
             start.y = rect.size.height;
             
-            CGFloat scaleMarkLength = whiteboardWidth * [self normScaleMarkLengthWithIndex:i];
+            CGFloat scaleMarkLength = whiteboardWidth * [self _normScaleMarkLengthWithIndex:i];
             end.y = start.y - scaleMarkLength;
             
             if (i % 50 == 0) {
@@ -276,7 +283,7 @@
             //画刻度, 从左往右画
             start.x = (mmWidth * i + startPadding) * sin(DEGREES_TO_RADIANS(60));
             start.y = (mmWidth * i + startPadding) * sin(DEGREES_TO_RADIANS(30));
-            float scaleMarkLength = whiteboardWidth * [self normScaleMarkLengthWithIndex:i];
+            float scaleMarkLength = whiteboardWidth * [self _normScaleMarkLengthWithIndex:i];
             end.x = start.x - scaleMarkLength * sin(DEGREES_TO_RADIANS(30));
             end.y = start.y + scaleMarkLength * sin(DEGREES_TO_RADIANS(60));
             
@@ -313,7 +320,7 @@
                 
                 layer.frame = CGRectMake(layerCenterX - width / 2 , layerCenterY - height / 2, width, height);
                 [self.layer addSublayer:layer];
-                //TODO: 这里必须在添加以后，仿射变换才生效 ？？？
+                //这里必须在添加以后，仿射变换才生效 ？？？
                 layer.affineTransform = CGAffineTransformMakeRotation(DEGREES_TO_RADIANS(30));
             }
         }
@@ -344,7 +351,7 @@
 }
 
 
-- (CGFloat)normScaleMarkLengthWithIndex:(int)index {
+- (CGFloat)_normScaleMarkLengthWithIndex:(int)index {
     if (index % 10 == 0) {
         return NXGeometryBox::ScaleMarkLength::normLengthForType1cm;
     } else if (index % 5 == 0) {
@@ -379,15 +386,135 @@
 }
 
 
-//TODO: 响应范围
+
 - (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
     
-    //    BOOL ret = [super pointInside:point withEvent:event];
-    //    if (ret) return YES;
-    //    CGFloat extDrawAreaHeight = NXTeachToolPosition.normDrawAreaExtendedHeight * self.position.whiteboard.frame.size.width;
-    //    CGRect rect = CGRectMake(0, -extDrawAreaHeight, self.bounds.size.width, extDrawAreaHeight);
-    //    return CGRectContainsPoint(rect, point);
-    return YES;
+    const CGFloat whiteboardWidth = self.whiteboardWidth;
+    CGFloat extDrawAreaHeight = NXGeometryBox::NormExtDrawAreaHeight * whiteboardWidth;
+    
+    const CGFloat width = self.bounds.size.width;
+    const CGFloat height = self.bounds.size.height;
+    
+    //left ext rect
+    CGRect leftRect = CGRectMake(-extDrawAreaHeight, 0, extDrawAreaHeight, height);
+    if (CGRectContainsPoint(leftRect, point)) {
+        return YES;
+    }
+    
+    //hypotenuse ext rect
+    {
+        const CGFloat hypotenuseWidth = sqrt(width *width + height * height);
+        const CGRect rect = CGRectMake(0, 0, hypotenuseWidth, extDrawAreaHeight);
+        /*
+         使用坐标变换
+         原始坐标： 逆时针旋转45度， 之后再y轴 正方向平移 extDrawAreaHeight
+         */
+        CGAffineTransform transform = CGAffineTransformMakeRotation(DEGREES_TO_RADIANS(-30));
+        transform = CGAffineTransformTranslate(transform, 0, extDrawAreaHeight);
+        
+        CGPoint transformPoint = CGPointApplyAffineTransform(point, transform);
+        if (CGRectContainsPoint(rect, transformPoint)) {
+            return YES;
+        }
+    }
+    
+    //bottom ext rect
+    CGRect bottomRect = CGRectMake(0, height, width, extDrawAreaHeight);
+    if (CGRectContainsPoint(bottomRect, point)) {
+        return YES;
+    }
+    
+    //inner triangle
+    if (point.y >= point.x * tan(DEGREES_TO_RADIANS(30))) {
+        return YES;
+    }
+
+    return NO;
+}
+
+
+#pragma mark -
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
+    
+    const CGFloat whiteboardWidth = _whiteboardWidth;
+    const CGFloat extDrawAreaHeight = whiteboardWidth * NXGeometryBox::NormExtDrawAreaHeight;
+    const CGFloat insideDrawAreaHeight = whiteboardWidth * NXGeometryBox::ScaleMarkLength::normLengthForType1mm;
+    const CGFloat width = self.bounds.size.width;
+    const CGFloat height = self.bounds.size.height;
+    
+    CGPoint location = [touch locationInView:self];
+    if (gestureRecognizer == self.leftDrawLineGesture) {
+        
+        CGRect extRect = CGRectMake(-extDrawAreaHeight, 0, extDrawAreaHeight, height);
+        if (CGRectContainsPoint(extRect, location)) {
+            return YES;
+        }
+        
+        CGFloat startOffsetY = insideDrawAreaHeight * tan(DEGREES_TO_RADIANS(60));
+        CGFloat endOffsetY = insideDrawAreaHeight;
+        CGFloat insideRectHeight = height - startOffsetY - endOffsetY;
+        CGRect insideRect = CGRectMake(0, startOffsetY, insideDrawAreaHeight, insideRectHeight);
+        if (CGRectContainsPoint(insideRect, location)) {
+            return YES;
+        }
+    }
+    
+        
+    if (gestureRecognizer == self.bottomDrawLineGesture) {
+        
+        CGRect extRect = CGRectMake(0, height, width, extDrawAreaHeight);
+        if (CGRectContainsPoint(extRect, location)) {
+            return YES;
+        }
+        
+        CGFloat startOffsetX = insideDrawAreaHeight;
+        CGFloat endOffsetX = insideDrawAreaHeight * tan(DEGREES_TO_RADIANS(60));
+        CGFloat insideRectWidth = width - startOffsetX - endOffsetX;
+        CGRect insideRect = CGRectMake(startOffsetX, height - insideDrawAreaHeight, insideRectWidth, insideDrawAreaHeight);
+        if (CGRectContainsPoint(insideRect, location)) {
+            return YES;
+        }
+    }
+    
+    
+    if (gestureRecognizer == self.hypotenuseDrawLineGesture) {
+        
+        const CGFloat sideLength = sqrt(width * width + height * height);
+        
+        /*
+         使用坐标变换
+         原始坐标： 逆时针旋转30度， 之后在y轴 正方向平移 extDrawAreaHeight
+         */
+        {
+            CGRect extRect = CGRectMake(0, 0, sideLength, extDrawAreaHeight);
+            CGAffineTransform transform = CGAffineTransformMakeRotation(DEGREES_TO_RADIANS(-30));
+            transform = CGAffineTransformTranslate(transform, 0, extDrawAreaHeight);
+            CGPoint transformPoint = CGPointApplyAffineTransform(location, transform);
+            if (CGRectContainsPoint(extRect, transformPoint)) {
+                return YES;
+            }
+
+        }
+        
+        {
+            CGFloat startOffsetX = insideDrawAreaHeight * tan(DEGREES_TO_RADIANS(30));
+            CGFloat endOffsetX = startOffsetX;
+            CGFloat width = sideLength - startOffsetX - endOffsetX;
+            CGRect insideRect = CGRectMake(0, 0, width, insideDrawAreaHeight);
+            CGAffineTransform transform = CGAffineTransformMakeRotation(DEGREES_TO_RADIANS(-30));
+            transform = CGAffineTransformTranslate(transform, -startOffsetX, 0);
+            CGPoint transformPoint = CGPointApplyAffineTransform(location, transform);
+            if (CGRectContainsPoint(insideRect, transformPoint)) {
+                return YES;
+            }
+        }
+    }
+    
+    if (gestureRecognizer == self.moveGesture) {
+        return YES;
+    }
+    return NO;
 }
 
 
@@ -409,6 +536,32 @@
     _normPosition = normPosition;
     [self _recalculate];
     [self _redraw];
+}
+
+- (void)setNormBaseSideLength:(CGFloat)normBaseSideLength {
+    if (_normBaseSideLength == normBaseSideLength) {
+        return;
+    }
+    if (normBaseSideLength >= _baseLengthRange.normMinLength && normBaseSideLength <= _baseLengthRange.normMaxLength) {
+        _normBaseSideLength = normBaseSideLength;
+        [self _recalculate];
+        [self _redraw];
+    }
+}
+
+- (void)setRotationAngle:(CGFloat)rotationAngle {
+    if (_rotationAngle == rotationAngle) {
+        return;
+    }
+    _rotationAngle = rotationAngle;
+    [self _recalculate];
+    [self _redraw];
+}
+
+
+- (void)setUserActionAllowed:(BOOL)userActionAllowed {
+    _userActionAllowed = userActionAllowed;
+    self.userInteractionEnabled = userActionAllowed;
 }
 
 - (UIButton *)closeButton {
@@ -451,14 +604,12 @@
 #pragma mark -
 
 - (void)_onClickCloseButton:(UIButton *)button {
-    NSLog(@"%s", __PRETTY_FUNCTION__);
     if (self.delegate && [self.delegate respondsToSelector:@selector(geometryToolOnCloseButtonClicked:)]) {
         [self.delegate geometryToolOnCloseButtonClicked:self];
     }
 }
 
 - (void)_onEnlargePanGestureChanged:(UIPanGestureRecognizer *)panGesture {
-    NSLog(@"%s", __PRETTY_FUNCTION__);
     NSAssert(_whiteboardWidth > 0, @"_onEnlargePanGestureChanged, whiteboardWidth can not be zero!");
     CGPoint translation = [panGesture translationInView:self];
     CGFloat ratio = translation.x / _whiteboardWidth;
@@ -468,12 +619,15 @@
         _normBaseSideLength = newWidth;
         [self _recalculate];
         [self _redraw];
+        //notify base side length change
+        if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onNormBaseSideLengthChanged:)]) {
+            [self.delegate geometryTool:self onNormBaseSideLengthChanged:_normBaseSideLength];
+        }
     }
 }
 
 - (void)_onRotationPanGestureChanged:(UIPanGestureRecognizer *)rotationGesture {
     //参考： https://ost.51cto.com/posts/89
-    
     static CGPoint pre;
     switch (rotationGesture.state) {
         case UIGestureRecognizerStateBegan:
@@ -490,6 +644,11 @@
             _rotationAngle += angle;
             self.layer.affineTransform = CGAffineTransformMakeRotation(_rotationAngle);
             pre = cur;
+            
+            //notify rotation angle changed
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onRotationAngleChanged:)]) {
+                [self.delegate geometryTool:self onRotationAngleChanged:_rotationAngle];
+            }
         }
             break;
         default:
@@ -508,7 +667,57 @@
     [moveGesture setTranslation:CGPointZero inView:self];
     
     _normPosition = CGPointMake(anchorPoint.x / _whiteboardWidth, anchorPoint.y / _whiteboardWidth);
+    //notify norm position changed
+    if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onNormPositionChanged:)]) {
+        [self.delegate geometryTool:self onNormPositionChanged:_normPosition];
+    }
 }
 
+
+- (void)_onDrawLinePanGestureChanged:(UIPanGestureRecognizer *)panGesture {
+    
+    CGPoint location = [panGesture locationInView:self];
+    if (panGesture == self.leftDrawLineGesture) {
+        location.x = 0;
+        location.x -= self.drawLineWidth / 2;
+    } else if (panGesture == self.bottomDrawLineGesture) {
+        location.y = self.bounds.size.height + self.drawLineWidth /2;
+    } else if (panGesture == self.hypotenuseDrawLineGesture) {
+        //参考： https://blog.csdn.net/guyuealian/article/details/53954005
+        const CGPoint p0 = CGPointMake(0, -self.drawLineWidth/2/sin(DEGREES_TO_RADIANS(60)));
+        const CGPoint p1 = CGPointMake(self.drawLineWidth/2/sin(DEGREES_TO_RADIANS(30)), 0);
+        //计算直线
+        const CGFloat k = (p0.y - p1.y) / (p0.x - p1.x);
+        const CGFloat b = p1.y - k * p1.x;
+        //计算投影点
+        CGFloat x = (k * (location.y - b) + location.x) / (k * k + 1);
+        CGFloat y = k * x + b;
+        location.x = x;
+        location.y = y;
+    } else {
+        NSAssert(NO, @"not support yet !!!");
+    }
+    
+    CGPoint locationInSuperview = [self convertPoint:location toView:self.superview];
+    switch (panGesture.state) {
+        case UIGestureRecognizerStateBegan:
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineBeganAtPoint:)]) {
+                [self.delegate geometryTool:self onDrawLineBeganAtPoint:locationInSuperview];
+            }
+            break;
+        case UIGestureRecognizerStateChanged:
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineMovedToPoint:)]) {
+                [self.delegate geometryTool:self onDrawLineMovedToPoint:locationInSuperview];
+            }
+            break;
+        case UIGestureRecognizerStateEnded:
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineEndedAtPoint:)]) {
+                [self.delegate geometryTool:self onDrawLineEndedAtPoint:locationInSuperview];
+            }
+            break;
+        default:
+            break;
+    }
+}
 
 @end

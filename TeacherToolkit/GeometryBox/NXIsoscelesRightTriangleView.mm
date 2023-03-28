@@ -11,12 +11,8 @@
 
 @interface NXIsoscelesRightTriangleView ()<UIGestureRecognizerDelegate>
 
-@property (nonatomic, weak) UIView *whiteboard;
-
 @property (nonatomic, strong) UIButton *closeButton;
-
 @property (nonatomic, strong) UIButton *enlargeButton;
-
 @property (nonatomic, strong) UIButton *rotationButton;
 
 @property (nonatomic, strong) UIGestureRecognizer *moveGesture;

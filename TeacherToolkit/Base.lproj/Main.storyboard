@@ -136,7 +136,7 @@
         <scene sceneID="kt3-Xu-fal">
             <objects>
                 <viewController id="9vQ-O5-YmH" customClass="NXRightTriangleViewController" sceneMemberID="viewController">
-                    <view key="view" contentMode="scaleToFill" id="ok1-Ld-1Ld">
+                    <view key="view" contentMode="scaleToFill" id="ok1-Ld-1Ld" customClass="NXWhiteboardView">
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
