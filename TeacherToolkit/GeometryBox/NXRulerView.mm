@@ -261,9 +261,6 @@
 }
 
 #pragma mark -
-- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
-    return [super gestureRecognizerShouldBegin:gestureRecognizer];
-}
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
     
