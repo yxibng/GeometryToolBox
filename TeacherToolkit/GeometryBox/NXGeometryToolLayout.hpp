@@ -112,6 +112,10 @@ struct RulerLayout {
 
 
 struct IsoscelesRightTriangleLayout {
+    
+    
+    static constexpr NXFloat normPromptLabelMargin = 50.0 / WhiteboardWidth;
+    
     //默认直角边归一化高
     static NXFloat defaultShortCatetoNormHeight() {
         return 4 * NormOneCm + paddingForCateto().normStartPadding + paddingForCateto().normEndPadding;
