@@ -66,17 +66,12 @@ struct Size {
 
 
 struct DrawStyle {
-    
-    static constexpr int greenColor = 0xFF089C74;
-    static constexpr int blackColor = 0xFF000000;
-    //black with alpha 0.05
-    static constexpr int scaleMarkBackgroundColor = 0x0D000000;
-    //white with alpha 0.7
-    static constexpr int mainBackgroundColor = 0xB2FFFFFF;
     //刻度值 字体大小
     static constexpr NXFloat normFontSize = 14.0 / WhiteboardWidth;
     //刻度线 与 刻度值之间的空隙
     static constexpr NXFloat normGapBetweenTextAndScaleMark = 4.89 / WhiteboardWidth;
+
+    static constexpr NXFloat normPromptFontSize = 24.0 / WhiteboardWidth;
 };
 
 
@@ -84,6 +79,9 @@ struct RulerLayout {
     
     //归一化高度
     static constexpr NXFloat normHeight = 183.37 / WhiteboardWidth;
+    
+    static constexpr NXFloat normGapBetweenCloseButtonAndPromptLabel = 16.0 / WhiteboardWidth;
+    
     
     //默认归一化宽度
     static NXFloat defaultNormWidth() {

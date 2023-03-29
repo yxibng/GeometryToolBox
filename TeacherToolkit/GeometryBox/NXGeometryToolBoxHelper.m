@@ -65,6 +65,14 @@ alpha:((rgbValue >> 24) & 0xFF)/255.0]
     return angle;
 }
 
+
++ (CGFloat)distanceWithStartPoint:(CGPoint)start endPoint:(CGPoint)end {
+    CGFloat dx = end.x - start.x;
+    CGFloat dy = end.y - start.y;
+    return sqrt(dx * dx + dy *dy);
+}
+
+
 @end
 
 
@@ -72,6 +80,7 @@ static UIColor *_greenColor = nil;
 static UIColor *_blackColor = nil;
 static UIColor *_scaleMarkAreaBackgroundColor;
 static UIColor *_mainBackgroundColor;
+static UIColor *_promptTextColor;
 
 @implementation NXGeometryToolDrawStyle
 
@@ -102,6 +111,13 @@ static UIColor *_mainBackgroundColor;
         _mainBackgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.7];
     }
     return _mainBackgroundColor;
+}
+
++ (UIColor *)promptTextColor {
+    if (!_promptTextColor) {
+        _promptTextColor = [UIColor colorWithRed:122/255.0 green:122/255.0 blue:122/255.0 alpha:1.00];
+    }
+    return _promptTextColor;
 }
 
 

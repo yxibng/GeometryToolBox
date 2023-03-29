@@ -27,6 +27,11 @@ NS_ASSUME_NONNULL_BEGIN
  */
 + (CGFloat)bezierPathAngleOfPoint:(CGPoint)point center:(CGPoint)center;
 
+
++ (CGFloat)distanceWithStartPoint:(CGPoint)start endPoint:(CGPoint)end;
+
+
+
 @end
 
 @interface NXGeometryToolDrawStyle : NSObject
@@ -35,6 +40,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong, class, readonly) UIColor *blackColor;
 @property (nonatomic, strong, class, readonly) UIColor *scaleMarkAreaBackgroundColor;
 @property (nonatomic, strong, class, readonly) UIColor *mainBackgroundColor;
+
+@property (nonatomic, strong, class, readonly) UIColor *promptTextColor;
 
 @end
 

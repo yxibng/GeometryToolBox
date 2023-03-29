@@ -35,7 +35,7 @@ typedef NS_ENUM(NSUInteger, NXGeometryToolType) {
 - (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawLineEndedAtPoint:(CGPoint)point;
 - (void)geometryToolOnDrawLineCanceled:(UIView<NXGeometryToolProtocol> *)geometryTool;
 
-- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawLineLengthChanged:(CGPoint)length;
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawLineLengthChanged:(CGFloat)length;
 @end
 
 //draw arc

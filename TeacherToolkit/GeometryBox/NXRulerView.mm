@@ -11,12 +11,9 @@
 
 
 @interface NXRulerView () <UIGestureRecognizerDelegate>
-@property (nonatomic, weak) UIView *whiteboard;
 
 @property (nonatomic, strong) UIButton *closeButton;
-
 @property (nonatomic, strong) UIButton *enlargeButton;
-
 @property (nonatomic, strong) UIButton *rotationButton;
 
 @property (nonatomic, strong) UIPanGestureRecognizer *moveGesture;
@@ -25,8 +22,30 @@
 
 @property (nonatomic, assign) NXGeometryToolType geometryToolType;
 
+//show rotation angle or draw length
+@property (nonatomic, strong) UILabel *promptLabel;
+@property (nonatomic, copy) NSString *promptText;
 
 @end
+
+@interface NXRulerView (Prompt)
+
+- (void)_prompt_syncRotationAngle:(CGFloat)angle;
+- (void)_prompt_rotationAngleChanged:(CGFloat)angle;
+
+- (void)_prompt_syncDrawLineLength:(CGFloat)length;
+- (void)_prompt_drawLineBeganAtPoint:(CGPoint)point;
+- (void)_prompt_drawLineMovedToPoint:(CGPoint)point;
+- (void)_prompt_drawLlineEndedAtPoint:(CGPoint)point;
+
+- (void)_prompt_syncMoved;
+- (void)_prompt_moved;
+
+- (void)_prompt_SyncEnlarged;
+- (void)_prompt_enlarged;
+
+@end
+
 
 
 @implementation NXRulerView
@@ -210,6 +229,22 @@
         CGFloat y = rect.size.height - (bottomMargin + sideLength /2);
         _rotationButton.layer.position = CGPointMake(x, y);
     }
+    
+    {
+        //promptLabel
+        const CGFloat fontSize = self.whiteboardWidth * NXGeometryBox::DrawStyle::normPromptFontSize;
+        UIFont *font = [UIFont systemFontOfSize:fontSize];
+        self.promptLabel.font = font;
+        self.promptLabel.text = self.promptText;
+        
+        CGRect rect = [NXGeometryToolBoxHelper textRectWithString:self.promptText font:font];
+        self.promptLabel.bounds = rect;
+        
+        const CGFloat gap = NXGeometryBox::RulerLayout::normGapBetweenCloseButtonAndPromptLabel * self.whiteboardWidth;
+        const CGFloat x = self.closeButton.layer.position.x + self.closeButton.bounds.size.width / 2 + gap + rect.size.width /2;
+        const CGFloat y = self.closeButton.layer.position.y;
+        self.promptLabel.layer.position = CGPointMake(x, y);
+    }
 }
 
 
@@ -291,8 +326,11 @@
         return;
     }
     _normPosition = normPosition;
+    
     [self _recalculate];
     [self _redraw];
+    
+    [self _prompt_syncMoved];
 }
 
 - (void)setNormBaseSideLength:(CGFloat)normBaseSideLength {
@@ -303,6 +341,8 @@
         _normBaseSideLength = normBaseSideLength;
         [self _recalculate];
         [self _redraw];
+        
+        [self _prompt_SyncEnlarged];
     }
 }
 
@@ -313,6 +353,8 @@
     _rotationAngle = rotationAngle;
     [self _recalculate];
     [self _redraw];
+    
+    [self _prompt_syncRotationAngle:rotationAngle];
 }
 
 
@@ -356,6 +398,17 @@
     return _rotationButton;
 }
 
+
+- (UILabel *)promptLabel {
+    if (!_promptLabel) {
+        _promptLabel = [[UILabel alloc] init];
+        _promptLabel.textColor = NXGeometryToolDrawStyle.promptTextColor;
+        [self addSubview:_promptLabel];
+        _promptLabel.backgroundColor = UIColor.clearColor;
+    }
+    return _promptLabel;
+}
+
 #pragma mark -
 
 - (void)_onClickCloseButton:(UIButton *)button {
@@ -377,6 +430,8 @@
         if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onNormBaseSideLengthChanged:)]) {
             [self.delegate geometryTool:self onNormBaseSideLengthChanged:_normBaseSideLength];
         }
+        
+        [self _prompt_enlarged];
     }
 }
 
@@ -404,6 +459,8 @@
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onRotationAngleChanged:)]) {
                 [self.delegate geometryTool:self onRotationAngleChanged:_rotationAngle];
             }
+            
+            [self _prompt_rotationAngleChanged:_rotationAngle];
         }
             break;
         default:
@@ -425,6 +482,8 @@
     if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onNormPositionChanged:)]) {
         [self.delegate geometryTool:self onNormPositionChanged:_normPosition];
     }
+    
+    [self _prompt_moved];
 }
 
 
@@ -437,16 +496,20 @@
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineBeganAtPoint:)]) {
                 [self.delegate geometryTool:self onDrawLineBeganAtPoint:locationInSuperview];
             }
+            
+            [self _prompt_drawLineBeganAtPoint:location];
             break;
         case UIGestureRecognizerStateChanged:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineMovedToPoint:)]) {
                 [self.delegate geometryTool:self onDrawLineMovedToPoint:locationInSuperview];
             }
+            [self _prompt_drawLineMovedToPoint:location];
             break;
         case UIGestureRecognizerStateEnded:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineEndedAtPoint:)]) {
                 [self.delegate geometryTool:self onDrawLineEndedAtPoint:locationInSuperview];
             }
+            [self _prompt_drawLlineEndedAtPoint:location];
             break;
         case UIGestureRecognizerStateCancelled:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryToolOnDrawLineCanceled:)]) {
@@ -458,3 +521,75 @@
 }
 
 @end
+
+static CGPoint _startPoint;
+static CGPoint _endPoint;
+
+@implementation NXRulerView (Prompt)
+
+- (void)_prompt_syncRotationAngle:(CGFloat)angle {
+    [self _prompt_rotationAngleChanged:angle];
+}
+
+- (void)_prompt_rotationAngleChanged:(CGFloat)angle {
+    const int degree = RADIANS_TO_DEGREES(angle);
+    NSString *text = [NSString stringWithFormat:@"%d°", degree];
+    self.promptText = text;
+    self.promptLabel.hidden = NO;
+    [self setNeedsLayout];
+    [self layoutIfNeeded];
+}
+
+- (void)_prompt_syncDrawLineLength:(CGFloat)length {
+    [self _onDrawLineLengthChanged:length];
+}
+
+- (void)_prompt_drawLineBeganAtPoint:(CGPoint)point {
+    _startPoint = point;
+}
+- (void)_prompt_drawLineMovedToPoint:(CGPoint)point {
+    _endPoint = point;
+    [self _calculateLength];
+}
+- (void)_prompt_drawLlineEndedAtPoint:(CGPoint)point {
+    _endPoint = point;
+    [self _calculateLength];
+}
+
+- (void)_calculateLength {
+    
+    CGFloat length = [NXGeometryToolBoxHelper distanceWithStartPoint:_startPoint endPoint:_endPoint];
+    const CGFloat cm = (length / self.whiteboardWidth) / NXGeometryBox::NormOneCm;
+    [self _onDrawLineLengthChanged:cm];
+    //notify remote length changed
+    if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineLengthChanged:)]) {
+        [self.delegate geometryTool:self onDrawLineLengthChanged:cm];
+    }
+}
+
+- (void)_onDrawLineLengthChanged:(CGFloat)length {
+    self.promptText = [NSString stringWithFormat:@"%.1fcm", length];
+    self.promptLabel.hidden = NO;
+    [self setNeedsLayout];
+    [self layoutIfNeeded];
+}
+
+
+- (void)_prompt_syncMoved {
+    [self _prompt_moved];
+}
+
+- (void)_prompt_moved {
+    self.promptLabel.hidden = YES;
+}
+
+- (void)_prompt_SyncEnlarged {
+    [self _prompt_enlarged];
+}
+
+- (void)_prompt_enlarged {
+    self.promptLabel.hidden = YES;
+}
+
+@end
+
