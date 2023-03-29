@@ -149,14 +149,33 @@ static NSString *penImageName = @"pen";
         
         CGPoint p = CGPointApplyAffineTransform(point, translation);
         p = CGPointApplyAffineTransform(p, rotation);
-        
+        //笔杆
         CGRect rect = CGRectMake(0, 0, width, height);
         if (CGRectContainsPoint(rect, p)) {
-            NSLog(@"in pen");
             return YES;
         }
+        
+        const CGFloat triangleWidth = width / 2;
+        const CGFloat triangleHeight = 62 / 95.0 * boundWidth;
+        
+        //笔尖, 左一半三角形
+        if ( p.x <= triangleWidth && p.x >= 0) {
+            CGFloat diffY = p.y - height;
+            CGFloat maxY = p.x * triangleHeight / triangleWidth;
+            if (diffY >= 0 && diffY <= maxY ) {
+                return YES;
+            }
+        }
+        
+        //笔尖，右一半三角形
+        if ( p.x >= triangleWidth && p.x <= width ) {
+            CGFloat diffY = p.y - height;
+            CGFloat maxY = (width - p.x) * triangleHeight / triangleWidth;
+            if (diffY >= 0 && diffY <= maxY ) {
+                return YES;
+            }
+        }
     }
-    //TODO:  test pen nib
     return NO;
 }
 
@@ -485,15 +504,9 @@ static NSString *penImageName = @"pen";
 }
 
 - (void)_onDrawArcPanGestureChanged:(UIPanGestureRecognizer *)rotationGesture {
-    NSLog(@"%s", __PRETTY_FUNCTION__);
-    //TODO: 旋转处理， 画弧处理
     
     //参考： https://ost.51cto.com/posts/89
-    
-    
     CGPoint point = [self.penImageView convertPoint:self.penImageView.penNibPoint toView:self.superview];
-    
-    
     static CGPoint pre;
     switch (rotationGesture.state) {
         case UIGestureRecognizerStateBegan:
