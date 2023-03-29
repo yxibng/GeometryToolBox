@@ -94,30 +94,12 @@
             CGPoint cur = _points[i];
             const CGFloat dx = pre.x - _arcCenter.x;
             const CGFloat dy = pre.y - _arcCenter.y;
-            CGFloat radius = sqrt(dx * dx + dy * dy);
-            
-            CGFloat startAngle, endAngle;
-            {
-                
-                CGPoint end = CGPointMake(pre.x - _arcCenter.x, pre.y - _arcCenter.y);
-                CGFloat angel = acos(end.x / radius);
-                CGFloat degree = RADIANS_TO_DEGREES(angel);
-                NSLog(@"start degree = %f", degree);
-                startAngle = angel;
-            }
-            
-            {
-                CGPoint end = CGPointMake(cur.x - _arcCenter.x, cur.y - _arcCenter.y);
-                CGFloat angel = acos(end.x / radius);
-                CGFloat degree = RADIANS_TO_DEGREES(angel);
-                NSLog(@"end degree = %f", degree);
-                endAngle = angel;
-            }
-            
-            BOOL clockwise = startAngle > endAngle;
-            startAngle = M_PI * 2 - startAngle;
-            endAngle = M_PI * 2 - endAngle;
-
+            CGFloat radius = sqrt(dx * dx + dy * dy);            
+            CGFloat angleDiff = [NXGeometryToolBoxHelper rotationAngleWithCenter:_arcCenter startPoint:pre endPoint:cur];
+            //是否是顺时针
+            BOOL clockwise = angleDiff >= 0;
+            CGFloat startAngle = [NXGeometryToolBoxHelper bezierPathAngleOfPoint:pre center:_arcCenter];
+            CGFloat endAngle = startAngle + angleDiff;
             UIBezierPath *path = [UIBezierPath bezierPathWithArcCenter:_arcCenter radius:radius startAngle:startAngle endAngle:endAngle clockwise: clockwise];
             CGContextAddPath(context, path.CGPath);
         }

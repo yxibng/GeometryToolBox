@@ -21,6 +21,12 @@ NS_ASSUME_NONNULL_BEGIN
  */
 + (CGFloat)rotationAngleWithCenter:(CGPoint)center startPoint:(CGPoint)start endPoint:(CGPoint)end;
 
+
+/*
+ 在绘制 bezierPath 时， 计算 point 相对于 center 的旋转角度
+ */
++ (CGFloat)bezierPathAngleOfPoint:(CGPoint)point center:(CGPoint)center;
+
 @end
 
 @interface NXGeometryToolDrawStyle : NSObject

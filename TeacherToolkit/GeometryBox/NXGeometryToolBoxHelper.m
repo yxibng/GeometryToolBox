@@ -19,14 +19,14 @@ alpha:((rgbValue >> 24) & 0xFF)/255.0]
     CGSize constraint = CGSizeMake(300,NSUIntegerMax);
     NSDictionary *attributes = @{NSFontAttributeName: font};
     CGRect rect = [string boundingRectWithSize:constraint
-                                     options:(NSStringDrawingUsesLineFragmentOrigin|NSStringDrawingUsesFontLeading)
-                                  attributes:attributes
-                                     context:nil];
+                                       options:(NSStringDrawingUsesLineFragmentOrigin|NSStringDrawingUsesFontLeading)
+                                    attributes:attributes
+                                       context:nil];
     return rect;
 }
 
 + (CGFloat)rotationAngleWithCenter:(CGPoint)center startPoint:(CGPoint)start endPoint:(CGPoint)end {
-  
+    
     /*
      参考： https://ost.51cto.com/posts/89
      
@@ -47,8 +47,23 @@ alpha:((rgbValue >> 24) & 0xFF)/255.0]
     return angle;
 }
 
-
-
++ (CGFloat)bezierPathAngleOfPoint:(CGPoint)point center:(CGPoint)center {
+    
+    CGFloat dx = point.x - center.x;
+    CGFloat dy = point.y - center.y;
+    
+    CGFloat angle;
+    if (dx >= 0 && dy >= 0) {
+        angle = atan(dy / dx);
+    } else if (dx <= 0 && dy >= 0) {
+        angle = M_PI - atan(-dy / dx);
+    } else if (dx <=0 && dy <= 0) {
+        angle = M_PI + atan(dy / dx);
+    } else {
+        angle = 2 * M_PI - atan(-dy / dx);
+    }
+    return angle;
+}
 
 @end
 
