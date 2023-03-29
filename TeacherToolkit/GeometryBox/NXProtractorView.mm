@@ -80,31 +80,6 @@
     _drawLineGesture = drawLineGesture;
 }
 
-//同步测量角度1
-- (void)syncMeasurer1Angle:(CGFloat)measurer1Angle {
-    NSAssert(measurer1Angle >=0 && measurer1Angle <= M_PI, @"measurer1Angle should be [0,M_PI]");
-    self.measurer1Angle = measurer1Angle;
-}
-//同步测量角度2
-- (void)syncMeasurer2Angle:(CGFloat)measurer2Angle {
-    NSAssert(measurer2Angle >=0 && measurer2Angle <= M_PI, @"measurer2Angle should be [0,M_PI]");
-    self.measurer2Angle = measurer2Angle;
-}
-
-//同步旋转角度
-- (void)syncRotationAngle:(CGFloat)rotationAngle {
-    self.rotationAngle = rotationAngle;
-}
-//同步锚点位置
-- (void)syncNormPosition:(CGPoint)normPosition {
-    self.normPosition = normPosition;
-}
-//同步基准边长
-- (void)syncNormBaseSideLength:(CGFloat)normBaseSideLength {
-    NSAssert(normBaseSideLength >= _baseLengthRange.normMinLength && normBaseSideLength <= _baseLengthRange.normMaxLength, @"normBaseSideLength should be [%f, %f]", _baseLengthRange.normMinLength, _baseLengthRange.normMaxLength);
-    self.normBaseSideLength = normBaseSideLength;
-}
-
 - (void)_recalculate {
     
     const CGFloat whiteboardWidth = _whiteboardWidth;
@@ -781,6 +756,11 @@
                 [self.delegate geometryTool:self onDrawArcEndedAtPoint:locationInSuperview];
             }
             break;
+        case UIGestureRecognizerStateCancelled:
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryToolOnDrawArcCanceled:)]) {
+                [self.delegate geometryToolOnDrawArcCanceled:self];
+            }
+            break;
         default:
             break;
     }
@@ -804,6 +784,11 @@
         case UIGestureRecognizerStateEnded:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineEndedAtPoint:)]) {
                 [self.delegate geometryTool:self onDrawLineEndedAtPoint:locationInSuperview];
+            }
+            break;
+        case UIGestureRecognizerStateCancelled:
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryToolOnDrawLineCanceled:)]) {
+                [self.delegate geometryToolOnDrawLineCanceled:self];
             }
             break;
         default:

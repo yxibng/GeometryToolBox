@@ -88,22 +88,6 @@
     }
 }
 
-//同步角度旋转
-- (void)syncRotationAngle:(CGFloat)rotationAngle {
-    self.rotationAngle = rotationAngle;
-}
-
-//同步位置更新
-- (void)syncNormPosition:(CGPoint)normPosition {
-    self.normPosition = normPosition;
-}
-
-//同步基准变长更新
-- (void)syncNormBaseSideLength:(CGFloat)normBaseSideLength {
-    self.normBaseSideLength = normBaseSideLength;
-}
-
-
 - (void)_recalculate {
     
     CGFloat x = _whiteboardWidth * self.normPosition.x;
@@ -706,6 +690,11 @@
         case UIGestureRecognizerStateEnded:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineEndedAtPoint:)]) {
                 [self.delegate geometryTool:self onDrawLineEndedAtPoint:locationInSuperview];
+            }
+            break;
+        case UIGestureRecognizerStateCancelled:
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryToolOnDrawLineCanceled:)]) {
+                [self.delegate geometryToolOnDrawLineCanceled:self];
             }
             break;
         default:

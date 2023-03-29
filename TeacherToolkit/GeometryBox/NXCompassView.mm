@@ -284,26 +284,6 @@ static NSString *penImageName = @"pen";
     
 }
 
-#pragma mark - 
-//同步打开角度变更
-- (void)syncOpenAngleInDegree:(CGFloat)openAngleInDegree {
-    self.openAngleInDegree = openAngleInDegree;
-}
-//同步锁定状态
-- (void)syncCurrentOpenAngleLocked:(BOOL)currentOpenAngleLocked {
-    self.currentOpenAngleLocked = currentOpenAngleLocked;
-}
-//同步旋转角度
-- (void)syncRotationAngle:(CGFloat)rotationAngle {
-    self.rotationAngle = rotationAngle;
-}
-//同步锚点位置
-- (void)syncNormPosition:(CGPoint)normPosition {
-    self.normPosition = normPosition;
-}
-
-
-
 #pragma mark -
 
 - (void)setWhiteboardWidth:(CGFloat)whiteboardWidth {
@@ -543,6 +523,11 @@ static NSString *penImageName = @"pen";
                 }
             }
         }
+            break;
+        case UIGestureRecognizerStateCancelled:
+            if (self.delegate && [self.delegate respondsToSelector:@selector(geometryToolOnDrawArcCanceled:)]) {
+                [self.delegate geometryToolOnDrawArcCanceled:self];
+            }
             break;
         default:
             break;

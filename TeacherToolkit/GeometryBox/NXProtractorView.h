@@ -61,18 +61,6 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) CGFloat measurer1Angle;
 @property (nonatomic, assign) CGFloat measurer2Angle;
 
-//同步测量角度1
-- (void)syncMeasurer1Angle:(CGFloat)measurer1Angle;
-//同步测量角度2
-- (void)syncMeasurer2Angle:(CGFloat)measurer2Angle;
-
-//同步旋转角度
-- (void)syncRotationAngle:(CGFloat)rotationAngle;
-//同步锚点位置
-- (void)syncNormPosition:(CGPoint)normPosition;
-//同步基准边长
-- (void)syncNormBaseSideLength:(CGFloat)normBaseSideLength;
-
 @end
 
 NS_ASSUME_NONNULL_END

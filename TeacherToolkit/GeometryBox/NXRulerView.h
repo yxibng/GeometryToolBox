@@ -56,12 +56,6 @@ NS_ASSUME_NONNULL_BEGIN
 // normBaseSideLength 取值范围
 @property (nonatomic, assign, readonly) NXGeometryToolBaseLengthRange baseLengthRange;
 
-//同步旋转角度
-- (void)syncRotationAngle:(CGFloat)rotationAngle;
-//同步锚点位置
-- (void)syncNormPosition:(CGPoint)normPosition;
-//同步基准边长
-- (void)syncNormBaseSideLength:(CGFloat)normBaseSideLength;
 
 @end
 

@@ -62,16 +62,6 @@ NS_ASSUME_NONNULL_BEGIN
 //是否锁定当前的开合角度
 @property (nonatomic, assign) BOOL currentOpenAngleLocked;
 
-//同步打开角度变更
-- (void)syncOpenAngleInDegree:(CGFloat)openAngleInDegree;
-//同步锁定状态
-- (void)syncCurrentOpenAngleLocked:(BOOL)currentOpenAngleLocked;
-
-//同步旋转角度
-- (void)syncRotationAngle:(CGFloat)rotationAngle;
-//同步锚点位置
-- (void)syncNormPosition:(CGPoint)normPosition;
-
 @end
 
 NS_ASSUME_NONNULL_END

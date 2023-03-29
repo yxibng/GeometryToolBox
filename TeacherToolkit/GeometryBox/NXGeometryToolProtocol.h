@@ -28,23 +28,47 @@ typedef NS_ENUM(NSUInteger, NXGeometryToolType) {
 
 
 //draw line
-@protocol NXGeometryToolDrawLineProtocol <NSObject>
+@protocol NXGeometryToolDrawLineDelegate <NSObject>
 @optional
 - (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawLineBeganAtPoint:(CGPoint)point;
 - (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawLineMovedToPoint:(CGPoint)point;
 - (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawLineEndedAtPoint:(CGPoint)point;
+- (void)geometryToolOnDrawLineCanceled:(UIView<NXGeometryToolProtocol> *)geometryTool;
+
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawLineLengthChanged:(CGPoint)length;
 @end
 
 //draw arc
-@protocol NXGeometryToolDrawArcProtocol <NSObject>
+@protocol NXGeometryToolDrawArcDelegate <NSObject>
 @optional
 - (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawArcBeganAtPoint:(CGPoint)point center:(CGPoint)center;
 - (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawArcMovedToPoint:(CGPoint)point;
 - (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawArcEndedAtPoint:(CGPoint)point;
+- (void)geometryToolOnDrawArcCanceled:(UIView<NXGeometryToolProtocol> *)geometryTool;
+
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onDrawArcAngleChanged:(CGPoint)angle;
 @end
 
 
-@protocol NXGeometryToolDelegate <NXGeometryToolDrawLineProtocol, NXGeometryToolDrawArcProtocol>
+@protocol NXGeometryToolAngleMeasurerDelegate <NSObject>
+@optional
+//测量器角度变化
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onMeasurer1AngleChanged:(CGFloat)measurer1Angle;
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onMeasurer2AngleChanged:(CGFloat)measurer2Angle;
+@end
+
+@protocol NXGeometryToolCompassDelegate <NSObject>
+@optional
+
+//报告打开角度变更
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onOpenAngleChanged:(CGFloat)openAngleInDegree;
+//报告锁定状态变更
+- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onCurrentOpenAngleLockStateChanged:(BOOL)currentOpenAngleLocked;
+
+@end
+
+
+@protocol NXGeometryToolDelegate <NXGeometryToolDrawLineDelegate, NXGeometryToolDrawArcDelegate, NXGeometryToolAngleMeasurerDelegate, NXGeometryToolCompassDelegate>
 //旋转事件
 - (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onRotationAngleChanged:(CGFloat)rotationAngle;
 //拖移事件
@@ -52,21 +76,10 @@ typedef NS_ENUM(NSUInteger, NXGeometryToolType) {
 //关闭事件
 - (void)geometryToolOnCloseButtonClicked:(UIView<NXGeometryToolProtocol> *)geometryTool;
 
-
 @optional
 
 //宽度扩大，缩小事件
 - (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onNormBaseSideLengthChanged:(CGFloat)normBaseSideLength;
-
-//测量器角度变化
-- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onMeasurer1AngleChanged:(CGFloat)measurer1Angle;
-- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onMeasurer2AngleChanged:(CGFloat)measurer2Angle;
-
-
-//报告打开角度变更
-- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onOpenAngleChanged:(CGFloat)openAngleInDegree;
-//报告锁定状态变更
-- (void)geometryTool:(UIView<NXGeometryToolProtocol> *)geometryTool onCurrentOpenAngleLockStateChanged:(BOOL)currentOpenAngleLocked;
 
 @end
 
@@ -117,11 +130,6 @@ typedef NS_ENUM(NSUInteger, NXGeometryToolType) {
 //划线的宽度
 @property (nonatomic, assign) CGFloat drawLineWidth;
 
-//同步旋转角度
-- (void)syncRotationAngle:(CGFloat)rotationAngle;
-//同步锚点位置
-- (void)syncNormPosition:(CGPoint)normPosition;
-
 
 #pragma mark - optional
 @optional
@@ -141,8 +149,6 @@ typedef NS_ENUM(NSUInteger, NXGeometryToolType) {
 @property (nonatomic, assign) CGFloat normBaseSideLength;
 // normBaseSideLength 取值范围
 @property (nonatomic, assign, readonly) NXGeometryToolBaseLengthRange baseLengthRange;
-//同步基准边长
-- (void)syncNormBaseSideLength:(CGFloat)normBaseSideLength;
 
 #pragma mark - protractor only
 /*
@@ -150,19 +156,12 @@ typedef NS_ENUM(NSUInteger, NXGeometryToolType) {
 */
 @property (nonatomic, assign) CGFloat measurer1Angle;
 @property (nonatomic, assign) CGFloat measurer2Angle;
-- (void)syncMeasurer1Angle:(CGFloat)measurer1Angle;
-- (void)syncMeasurer2Angle:(CGFloat)measurer2Angle;
 
 #pragma mark - compass only
 // 开合角度 0 - 130
 @property (nonatomic, assign) CGFloat openAngleInDegree;
 //是否锁定当前的开合角度
 @property (nonatomic, assign) BOOL currentOpenAngleLocked;
-//同步打开角度变更
-- (void)syncOpenAngleInDegree:(CGFloat)openAngleInDegree;
-//同步锁定状态
-- (void)syncCurrentOpenAngleLocked:(BOOL)currentOpenAngleLocked;
-
 
 @end
 
