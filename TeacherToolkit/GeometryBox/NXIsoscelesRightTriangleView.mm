@@ -19,7 +19,6 @@
 
 @property (nonatomic, assign) NXGeometryToolType geometryToolType;
 
-
 @property (nonatomic, strong) UIPanGestureRecognizer *leftDrawLineGesture;
 @property (nonatomic, strong) UIPanGestureRecognizer *bottomDrawLineGesture;
 @property (nonatomic, strong) UIPanGestureRecognizer *hypotenuseDrawLineGesture;
