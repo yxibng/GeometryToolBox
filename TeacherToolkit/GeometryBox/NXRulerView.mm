@@ -25,7 +25,6 @@
 
 //show rotation angle or draw length
 @property (nonatomic, strong) UILabel *promptLabel;
-
 @property (nonatomic, strong) NXPromptHelper *promptHelper;
 
 @end

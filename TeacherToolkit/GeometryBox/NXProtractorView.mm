@@ -8,6 +8,7 @@
 #import "NXProtractorView.h"
 #import "NXGeometryToolLayout.hpp"
 #import "NXGeometryToolBoxHelper.h"
+#import "NXPromptHelper.h"
 
 @interface NXProtractorView ()<UIGestureRecognizerDelegate>
 
@@ -25,6 +26,10 @@
 
 @property (nonatomic, strong) UILabel *angleLabel_1;
 @property (nonatomic, strong) UILabel *angleLabel_2;
+
+//show rotation angle or draw length
+@property (nonatomic, strong) UILabel *promptLabel;
+@property (nonatomic, strong) NXPromptHelper *promptHelper;
 
 @end
 
@@ -360,6 +365,19 @@
         int degree = RADIANS_TO_DEGREES(angleDiff);
         _angleLabel_1.text = _angleLabel_2.text = @(degree).stringValue;
     }
+    
+    {
+        //promptLabel
+        const CGFloat fontSize = self.whiteboardWidth * NXGeometryBox::DrawStyle::normPromptFontSize;
+        UIFont *font = [UIFont systemFontOfSize:fontSize];
+        self.promptLabel.font = font;
+        CGRect rect = [NXGeometryToolBoxHelper textRectWithString:self.promptLabel.text font:font];
+        self.promptLabel.bounds = rect;
+        
+        const CGFloat x = self.bounds.size.width / 2;
+        const CGFloat y = self.bounds.size.height - NXGeometryBox::ProtractorLayout::normInnerRadius * self.whiteboardWidth / 2;
+        self.promptLabel.layer.position = CGPointMake(x, y);
+    }
 }
 
 
@@ -485,6 +503,8 @@
     _normPosition = normPosition;
     [self _recalculate];
     [self _redraw];
+    
+    [self.promptHelper syncMoved];
 }
 
 - (void)setNormBaseSideLength:(CGFloat)normBaseSideLength {
@@ -495,6 +515,8 @@
         _normBaseSideLength = normBaseSideLength;
         [self _recalculate];
         [self _redraw];
+        
+        [self.promptHelper SyncEnlarged];
     }
 }
 
@@ -505,6 +527,8 @@
     _rotationAngle = rotationAngle;
     [self _recalculate];
     [self _redraw];
+    
+    [self.promptHelper syncRotationAngle:rotationAngle];
 }
 
 
@@ -576,6 +600,24 @@
     return _rotationButton;
 }
 
+- (UILabel *)promptLabel {
+    if (!_promptLabel) {
+        _promptLabel = [[UILabel alloc] init];
+        _promptLabel.textColor = NXGeometryToolDrawStyle.promptTextColor;
+        [self addSubview:_promptLabel];
+        _promptLabel.backgroundColor = UIColor.clearColor;
+    }
+    return _promptLabel;
+}
+
+- (NXPromptHelper *)promptHelper {
+    
+    if (!_promptHelper) {
+        _promptHelper = [[NXPromptHelper alloc] initWithGeometryTool:self promptLabel:self.promptLabel];
+    }
+    return _promptHelper;
+    
+}
 
 
 #pragma mark -
@@ -600,6 +642,7 @@
         if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onNormBaseSideLengthChanged:)]) {
             [self.delegate geometryTool:self onNormBaseSideLengthChanged:_normBaseSideLength];
         }
+        [self.promptHelper enlarged];
     }
 }
 
@@ -626,6 +669,8 @@
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onRotationAngleChanged:)]) {
                 [self.delegate geometryTool:self onRotationAngleChanged:_rotationAngle];
             }
+        
+            [self.promptHelper rotationAngleChanged:_rotationAngle];
         }
             break;
         default:
@@ -649,6 +694,7 @@
         [self.delegate geometryTool:self onNormPositionChanged:_normPosition];
     }
 
+    [self.promptHelper moved];
 }
 
 
@@ -744,17 +790,21 @@
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawArcBeganAtPoint:center:)]) {
                 [self.delegate geometryTool:self onDrawArcBeganAtPoint:locationInSuperview center:self.layer.position];
             }
+            
+            [self.promptHelper drawArcBeganAtPoint:location center:CGPointMake(self.bounds.size.width/2, self.bounds.size.height)];
+            
             break;
         case UIGestureRecognizerStateChanged:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawArcMovedToPoint:)]) {
                 [self.delegate geometryTool:self onDrawArcMovedToPoint:locationInSuperview];
             }
-
+            [self.promptHelper drawArcMovedToPoint:location];
             break;
         case UIGestureRecognizerStateEnded:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawArcEndedAtPoint:)]) {
                 [self.delegate geometryTool:self onDrawArcEndedAtPoint:locationInSuperview];
             }
+            [self.promptHelper drawArcEndedAtPoint:location];
             break;
         case UIGestureRecognizerStateCancelled:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryToolOnDrawArcCanceled:)]) {
@@ -775,16 +825,19 @@
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineBeganAtPoint:)]) {
                 [self.delegate geometryTool:self onDrawLineBeganAtPoint:locationInSuperview];
             }
+            [self.promptHelper drawLineBeganAtPoint:location];
             break;
         case UIGestureRecognizerStateChanged:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineMovedToPoint:)]) {
                 [self.delegate geometryTool:self onDrawLineMovedToPoint:locationInSuperview];
             }
+            [self.promptHelper drawLineMovedToPoint:location];
             break;
         case UIGestureRecognizerStateEnded:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineEndedAtPoint:)]) {
                 [self.delegate geometryTool:self onDrawLineEndedAtPoint:locationInSuperview];
             }
+            [self.promptHelper drawLlineEndedAtPoint:location];
             break;
         case UIGestureRecognizerStateCancelled:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryToolOnDrawLineCanceled:)]) {
