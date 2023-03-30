@@ -8,7 +8,6 @@
 #import "NXIsoscelesRightTriangleView.h"
 #import "NXGeometryToolLayout.hpp"
 #import "NXGeometryToolBoxHelper.h"
-
 #import "NXPromptHelper.h"
 
 @interface NXIsoscelesRightTriangleView ()<UIGestureRecognizerDelegate>
@@ -28,7 +27,6 @@
 
 //show rotation angle or draw length
 @property (nonatomic, strong) UILabel *promptLabel;
-
 @property (nonatomic, strong) NXPromptHelper *promptHelper;
 
 @end

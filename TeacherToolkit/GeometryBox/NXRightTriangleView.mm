@@ -8,8 +8,7 @@
 #import "NXRightTriangleView.h"
 #import "NXGeometryToolLayout.hpp"
 #import "NXGeometryToolBoxHelper.h"
-
-
+#import "NXPromptHelper.h"
 
 @interface NXRightTriangleView ()<UIGestureRecognizerDelegate>
 
@@ -24,6 +23,10 @@
 @property (nonatomic, strong) UIPanGestureRecognizer *leftDrawLineGesture;
 @property (nonatomic, strong) UIPanGestureRecognizer *bottomDrawLineGesture;
 @property (nonatomic, strong) UIPanGestureRecognizer *hypotenuseDrawLineGesture;
+
+//show rotation angle or draw length
+@property (nonatomic, strong) UILabel *promptLabel;
+@property (nonatomic, strong) NXPromptHelper *promptHelper;
 
 @end
 
@@ -332,6 +335,22 @@
     
     auto normEnlargeAnchorPoint = NXGeometryBox::RightTriangleLayout::normEnlargeButtonAnchorPoint(normCloseAnchorPoint, normRotationAnchorPoint);
     self.enlargeButton.layer.position = CGPointMake(whiteboardWidth * normEnlargeAnchorPoint.x, whiteboardWidth * normEnlargeAnchorPoint.y);
+    
+    //prompt label
+    {
+        //promptLabel
+        const CGFloat fontSize = self.whiteboardWidth * NXGeometryBox::DrawStyle::normPromptFontSize;
+        UIFont *font = [UIFont systemFontOfSize:fontSize];
+        self.promptLabel.font = font;
+        CGRect rect = [NXGeometryToolBoxHelper textRectWithString:self.promptLabel.text font:font];
+        self.promptLabel.bounds = rect;
+        
+        const CGFloat margin = NXGeometryBox::RightTriangleLayout::normPromptLabelMargin * self.whiteboardWidth;
+        const CGFloat x = margin + rect.size.width / 2;
+        const CGFloat y = self.bounds.size.height - (margin + rect.size.height /2);
+        self.promptLabel.layer.position = CGPointMake(x, y);
+    }
+    
 }
 
 
@@ -520,6 +539,9 @@
     _normPosition = normPosition;
     [self _recalculate];
     [self _redraw];
+    
+    [self.promptHelper syncMoved];
+    
 }
 
 - (void)setNormBaseSideLength:(CGFloat)normBaseSideLength {
@@ -530,6 +552,7 @@
         _normBaseSideLength = normBaseSideLength;
         [self _recalculate];
         [self _redraw];
+        [self.promptHelper SyncEnlarged];
     }
 }
 
@@ -540,6 +563,7 @@
     _rotationAngle = rotationAngle;
     [self _recalculate];
     [self _redraw];
+    [self.promptHelper syncRotationAngle:rotationAngle];
 }
 
 
@@ -583,7 +607,24 @@
     return _rotationButton;
 }
 
+- (UILabel *)promptLabel {
+    if (!_promptLabel) {
+        _promptLabel = [[UILabel alloc] init];
+        _promptLabel.textColor = NXGeometryToolDrawStyle.promptTextColor;
+        [self addSubview:_promptLabel];
+        _promptLabel.backgroundColor = UIColor.clearColor;
+    }
+    return _promptLabel;
+}
 
+- (NXPromptHelper *)promptHelper {
+    
+    if (!_promptHelper) {
+        _promptHelper = [[NXPromptHelper alloc] initWithGeometryTool:self promptLabel:self.promptLabel];
+    }
+    return _promptHelper;
+    
+}
 
 #pragma mark -
 
@@ -607,6 +648,7 @@
         if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onNormBaseSideLengthChanged:)]) {
             [self.delegate geometryTool:self onNormBaseSideLengthChanged:_normBaseSideLength];
         }
+        [self.promptHelper enlarged];
     }
 }
 
@@ -633,6 +675,8 @@
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onRotationAngleChanged:)]) {
                 [self.delegate geometryTool:self onRotationAngleChanged:_rotationAngle];
             }
+
+            [self.promptHelper rotationAngleChanged:_rotationAngle];
         }
             break;
         default:
@@ -655,6 +699,7 @@
     if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onNormPositionChanged:)]) {
         [self.delegate geometryTool:self onNormPositionChanged:_normPosition];
     }
+    [self.promptHelper moved];
 }
 
 
@@ -688,16 +733,19 @@
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineBeganAtPoint:)]) {
                 [self.delegate geometryTool:self onDrawLineBeganAtPoint:locationInSuperview];
             }
+            [self.promptHelper drawLineBeganAtPoint:location];
             break;
         case UIGestureRecognizerStateChanged:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineMovedToPoint:)]) {
                 [self.delegate geometryTool:self onDrawLineMovedToPoint:locationInSuperview];
             }
+            [self.promptHelper drawLineMovedToPoint:location];
             break;
         case UIGestureRecognizerStateEnded:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryTool:onDrawLineEndedAtPoint:)]) {
                 [self.delegate geometryTool:self onDrawLineEndedAtPoint:locationInSuperview];
             }
+            [self.promptHelper drawLlineEndedAtPoint:location];
             break;
         case UIGestureRecognizerStateCancelled:
             if (self.delegate && [self.delegate respondsToSelector:@selector(geometryToolOnDrawLineCanceled:)]) {

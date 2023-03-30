@@ -40,7 +40,7 @@
 }
 
 - (void)rotationAngleChanged:(CGFloat)angle {
-    const int degree = RADIANS_TO_DEGREES(angle);
+    const int degree = (int)RADIANS_TO_DEGREES(angle) % 360;
     NSString *text = [NSString stringWithFormat:@"%d°", degree];
     
     self.promptLabel.text = text;
