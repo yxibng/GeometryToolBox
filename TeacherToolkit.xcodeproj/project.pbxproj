@@ -25,6 +25,7 @@
 		8643188029C2E5ED00E3B1F4 /* NXProtractorViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8643187F29C2E5ED00E3B1F4 /* NXProtractorViewController.m */; };
 		8643188329C2E60000E3B1F4 /* NXCompassViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8643188229C2E60000E3B1F4 /* NXCompassViewController.m */; };
 		86DC70EB29D4534800E6AB45 /* NXPromptHelper.mm in Sources */ = {isa = PBXBuildFile; fileRef = 86DC70EA29D4534800E6AB45 /* NXPromptHelper.mm */; };
+		86DC70EE29D530E000E6AB45 /* NXGeometryToolFactory.m in Sources */ = {isa = PBXBuildFile; fileRef = 86DC70ED29D530E000E6AB45 /* NXGeometryToolFactory.m */; };
 		86FAF1F629C85A41003A6E2D /* NXGeometryToolBoxHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 86FAF1F529C85A41003A6E2D /* NXGeometryToolBoxHelper.m */; };
 		86FAF1F929CAD0A0003A6E2D /* NXGeometryBoxManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 86FAF1F829CAD0A0003A6E2D /* NXGeometryBoxManager.m */; };
 		86FAF1FD29CBF086003A6E2D /* NXWhiteboardView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 86FAF1FC29CBF086003A6E2D /* NXWhiteboardView.mm */; };
@@ -65,6 +66,8 @@
 		8643188229C2E60000E3B1F4 /* NXCompassViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NXCompassViewController.m; sourceTree = "<group>"; };
 		86DC70E929D4534800E6AB45 /* NXPromptHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NXPromptHelper.h; sourceTree = "<group>"; };
 		86DC70EA29D4534800E6AB45 /* NXPromptHelper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = NXPromptHelper.mm; sourceTree = "<group>"; };
+		86DC70EC29D530E000E6AB45 /* NXGeometryToolFactory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NXGeometryToolFactory.h; sourceTree = "<group>"; };
+		86DC70ED29D530E000E6AB45 /* NXGeometryToolFactory.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NXGeometryToolFactory.m; sourceTree = "<group>"; };
 		86DFBF8B29C81F1D00D3F73D /* NXGeometryToolLayout.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = NXGeometryToolLayout.hpp; sourceTree = "<group>"; };
 		86DFBF8D29C831DA00D3F73D /* NXGeometryToolProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NXGeometryToolProtocol.h; sourceTree = "<group>"; };
 		86FAF1F429C85A41003A6E2D /* NXGeometryToolBoxHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NXGeometryToolBoxHelper.h; sourceTree = "<group>"; };
@@ -127,6 +130,8 @@
 			isa = PBXGroup;
 			children = (
 				86DFBF8D29C831DA00D3F73D /* NXGeometryToolProtocol.h */,
+				86DC70EC29D530E000E6AB45 /* NXGeometryToolFactory.h */,
+				86DC70ED29D530E000E6AB45 /* NXGeometryToolFactory.m */,
 				8643186829C0774900E3B1F4 /* NXCompassView.h */,
 				8643186929C0774900E3B1F4 /* NXCompassView.mm */,
 				86FAF1F429C85A41003A6E2D /* NXGeometryToolBoxHelper.h */,
@@ -245,6 +250,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				86DC70EE29D530E000E6AB45 /* NXGeometryToolFactory.m in Sources */,
 				8643186129C076FF00E3B1F4 /* NXRightTriangleView.mm in Sources */,
 				8643187D29C2E5DD00E3B1F4 /* NXRightTriangleViewController.m in Sources */,
 				8643188329C2E60000E3B1F4 /* NXCompassViewController.m in Sources */,
